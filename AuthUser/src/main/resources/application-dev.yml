@@ -6,7 +6,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: https://dev-wgk04dj5v68sbhre.us.auth0.com/
+          issuer-uri: ${AUTH0_ISSUER_URI:https://dev-4mxqf6pdu0czpsbp.us.auth0.com/}
   application:
     name: auth-user
 
@@ -26,9 +26,9 @@ consent:
     
     
 auth0:
-  domain: https://dev-wgk04dj5v68sbhre.us.auth0.com
-  audience: https://mockbank/api
+  domain: ${AUTH0_DOMAIN:https://dev-4mxqf6pdu0czpsbp.us.auth0.com}
+  audience: ${AUTH0_AUDIENCE:https://mockbank/api}
   mgmt:
-     client-id: 7m9h4UQsjOeVom5ysSt0t3TFLRgibBkT
-     client-secret: COElk9GHOmWS9L4MAQvscuxA49Cl4mfI
-     audience: https://dev-wgk04dj5v68sbhre.us.auth0.com/api/v2/
+     client-id: ${AUTH0_MGMT_CLIENT_ID}
+     client-secret: ${AUTH0_MGMT_CLIENT_SECRET}
+     audience: ${AUTH0_DOMAIN:https://dev-4mxqf6pdu0czpsbp.us.auth0.com}/api/v2/

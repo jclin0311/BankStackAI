@@ -1,0 +1,551 @@
+openapi: 3.0.3
+info:
+  title: Account Service API
+  version: 1.0.0
+  description: |
+    Account management, balances, holds, and postings for MockBank.
+    Security: All secured endpoints expect a Bearer JWT (Auth0-issued) with the correct scope(s).
+    Use the Authorization header: "Authorization: Bearer <token>".
+
+servers:
+  - url: https://bugs-ricky-eval-proprietary.trycloudflare.com            
+    description: Local
+
+tags:
+  - name: Accounts
+  - name: Holds
+  - name: Postings
+  - name: Admin
+
+paths:
+  /api/v1/accounts:
+    post:
+      tags: [Accounts]
+      summary: Create an account
+      operationId: createAccount
+      security:
+        - bearerAuth: []
+      x-required-scopes: [fdx:accounts.write]
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: false
+          schema:
+            type: string
+          description: Optional idempotency key to safely retry account creation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountRequest'
+      responses:
+        '201':
+          description: Created
+          headers:
+            ETag:
+              description: Entity version for optimistic locking
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+    get:
+      tags: [Admin]
+      summary: List accounts (admin)
+      operationId: listAccounts
+      security:
+        - bearerAuth: []
+      x-required-scopes: [admin:accounts.read]
+      parameters:
+        - in: query
+          name: status
+          required: false
+          schema:
+            $ref: '#/components/schemas/AccountStatus'
+        - in: query
+          name: currency
+          required: false
+          schema:
+            type: string
+            example: CAD
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AccountResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/v1/accounts/{id}:
+    get:
+      tags: [Accounts]
+      summary: Get account by ID
+      operationId: getAccount
+      security:
+        - bearerAuth: []
+      x-required-scopes: [fdx:accounts.read]
+      parameters:
+        - $ref: '#/components/parameters/AccountIdPath'
+      responses:
+        '200':
+          description: OK
+          headers:
+            ETag:
+              description: Entity version for optimistic locking
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/accounts/{id}/balance:
+    get:
+      tags: [Accounts]
+      summary: Get balances
+      operationId: getBalances
+      security:
+        - bearerAuth: []
+      x-required-scopes: [fdx:accounts.read]
+      parameters:
+        - $ref: '#/components/parameters/AccountIdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountBalanceResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/customer/{id}/accounts:
+    get:
+      tags: [Accounts]
+      summary: List accounts for a customer
+      operationId: getAccountsByCustomer
+      security:
+        - bearerAuth: []
+      x-required-scopes: [fdx:accounts.read]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Customer ID
+          schema:
+            type: string
+            example: 8f8f2b33-4c3c-4d2e-8d9a-2b43a8f6a1a1
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AccountResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/v1/accounts/{id}/status:
+    patch:
+      tags: [Admin]
+      summary: Update account status
+      operationId: updateAccountStatus
+      security:
+        - bearerAuth: []
+      x-required-scopes: [fdx:accounts.write]
+      parameters:
+        - $ref: '#/components/parameters/AccountIdPath'
+        - name: status
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/AccountStatus'
+      responses:
+        '200':
+          description: Updated
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/accounts/{id}/owner:
+    get:
+      tags: [Accounts]
+      summary: Get account owner
+      operationId: getAccountOwner
+      security:
+        - bearerAuth: []
+      x-required-scopes: [fdx:accounts.read]
+      parameters:
+        - $ref: '#/components/parameters/AccountIdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountOwnerResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/accounts/{id}/holds:
+    post:
+      tags: [Holds]
+      summary: Place a funds hold
+      operationId: placeHold
+      security:
+        - bearerAuth: []
+      x-required-scopes: [fdx:accounts.write]
+      parameters:
+        - $ref: '#/components/parameters/AccountIdPath'
+        - in: header
+          name: Idempotency-Key
+          required: false
+          schema:
+            type: string
+          description: Optional idempotency key to safely retry hold placement.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateHoldRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HoldResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/accounts/{id}/holds/{holdId}/release:
+    post:
+      tags: [Holds]
+      summary: Release a funds hold
+      operationId: releaseHold
+      security:
+        - bearerAuth: []
+      x-required-scopes: [fdx:accounts.write]
+      parameters:
+        - $ref: '#/components/parameters/AccountIdPath'
+        - name: holdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: If-Match
+          required: false
+          schema:
+            type: string
+          description: Reserved for future optimistic checks (currently unused).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HoldResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/accounts/{id}/credit:
+    post:
+      tags: [Postings]
+      summary: Credit an account
+      operationId: creditAccount
+      security:
+        - bearerAuth: []
+      x-required-scopes: [fdx:accounts.write]
+      parameters:
+        - $ref: '#/components/parameters/AccountIdPath'
+        - in: header
+          name: If-Match
+          required: false
+          schema:
+            type: string
+          description: Expected ETag (version) for optimistic locking.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostingRequest'
+      responses:
+        '201':
+          description: Created
+          headers:
+            ETag:
+              description: Updated entity version
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/accounts/{id}/debit:
+    post:
+      tags: [Postings]
+      summary: Debit an account
+      operationId: debitAccount
+      security:
+        - bearerAuth: []
+      x-required-scopes: [fdx:accounts.write]
+      parameters:
+        - $ref: '#/components/parameters/AccountIdPath'
+        - in: header
+          name: If-Match
+          required: false
+          schema:
+            type: string
+          description: Expected ETag (version) for optimistic locking.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostingRequest'
+      responses:
+        '201':
+          description: Created
+          headers:
+            ETag:
+              description: Updated entity version
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    AccountIdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Bad Request
+    Unauthorized:
+      description: Unauthorized
+    Forbidden:
+      description: Forbidden
+    NotFound:
+      description: Not Found
+    Conflict:
+      description: Conflict
+
+  schemas:
+    AccountStatus:
+      type: string
+      enum: [ACTIVE, FROZEN, CLOSED]
+    AccountType:
+      type: string
+      enum: [CHEQUING, SAVINGS, CREDIT, LOAN]
+    AccountSubType:
+      type: string
+      enum: [PERSONAL, BUSINESS]
+    AccountRequest:
+      type: object
+      required: [customerId, accountType, accountSubType, status, currency]
+      properties:
+        customerId:
+          type: string
+          description: Owning customer ID
+          example: 8f8f2b33-4c3c-4d2e-8d9a-2b43a8f6a1a1
+        accountType:
+          $ref: '#/components/schemas/AccountType'
+        accountSubType:
+          $ref: '#/components/schemas/AccountSubType'
+        status:
+          $ref: '#/components/schemas/AccountStatus'
+        currency:
+          type: string
+          description: ISO 4217 currency (3 letters)
+          example: CAD
+          pattern: '^[A-Z]{3}$'
+        nickname:
+          type: string
+          maxLength: 64
+        displayName:
+          type: string
+          maxLength: 64
+        openingBalance:
+          type: number
+          format: double
+          example: 0.00
+    AccountResponse:
+      type: object
+      required: [id, customerId, accountNumber, accountType, accountSubType, status, currency, balance, maskedAccountNumber, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+        accountNumber:
+          type: string
+          example: "000123456789"
+        accountType:
+          $ref: '#/components/schemas/AccountType'
+        accountSubType:
+          $ref: '#/components/schemas/AccountSubType'
+        status:
+          $ref: '#/components/schemas/AccountStatus'
+        currency:
+          type: string
+          example: CAD
+        nickname:
+          type: string
+        displayName:
+          type: string
+        balance:
+          type: number
+          format: double
+          example: 1000.25
+        maskedAccountNumber:
+          type: string
+          example: "XXXX-XXXX-6789"
+        version:
+          type: integer
+          example: 3
+    AccountBalanceResponse:
+      type: object
+      required: [balance, totalHolds, available]
+      properties:
+        balance:
+          type: number
+          format: double
+          description: Ledger balance
+          example: 1000.25
+        totalHolds:
+          type: number
+          format: double
+          example: 50.00
+        available:
+          type: number
+          format: double
+          description: Balance minus holds
+          example: 950.25
+    AccountOwnerResponse:
+      type: object
+      required: [id, customerId]
+      properties:
+        id:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+    CreateHoldRequest:
+      type: object
+      required: [amount]
+      properties:
+        amount:
+          type: number
+          format: double
+          example: 50.00
+          minimum: 0
+          exclusiveMinimum: true
+        reason:
+          type: string
+          example: "bill payment hold"
+        releaseAt:
+          type: string
+          format: date-time
+        idempotencyKey:
+          type: string
+          description: Populated by server using header if provided
+    HoldStatus:
+      type: string
+      enum: [ACTIVE, RELEASED, CANCELED, EXPIRED]
+    HoldResponse:
+      type: object
+      required: [holdId, amount, status, createdAt]
+      properties:
+        holdId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: double
+          example: 50.00
+        status:
+          $ref: '#/components/schemas/HoldStatus'
+        createdAt:
+          type: string
+          format: date-time
+        releaseAt:
+          type: string
+          format: date-time
+          nullable: true
+    PostingRequest:
+      type: object
+      required: [amount]
+      properties:
+        amount:
+          type: number
+          format: double
+          example: 25.00
+        reason:
+          type: string
+          example: "ACH settlement"
+        idempotencyKey:
+          type: string
+          example: "c23d2c8b-7b2a-4c7a-b8f6-0a3e2d1c4b5a"
+        externalTransactionId:
+          type: string
+          format: uuid
+          example: "a3e14c1a-9b6f-4b8c-bd3d-0f4e8a5f6c2d"
+
+# Global: all secured endpoints expect a Bearer token
+security:
+  - bearerAuth: []

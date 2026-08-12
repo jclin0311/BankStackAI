@@ -5,7 +5,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: https://dev-wgk04dj5v68sbhre.us.auth0.com/
+          issuer-uri: ${AUTH0_ISSUER_URI:https://dev-4mxqf6pdu0czpsbp.us.auth0.com/}
           
       client:
         registration:
@@ -18,7 +18,7 @@ spring:
 
         provider:
           auth0:
-            token-uri: https://dev-wgk04dj5v68sbhre.us.auth0.com/oauth/token
+            token-uri: ${AUTH0_ISSUER_URI:https://dev-4mxqf6pdu0czpsbp.us.auth0.com/}oauth/token
             
             
   application:
@@ -77,7 +77,7 @@ biller:
 
 
 auth0:
-  audience: https://mockbank/api
+  audience: ${AUTH0_AUDIENCE:https://mockbank/api}
 
 
 

@@ -19,7 +19,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: https://dev-wgk04dj5v68sbhre.us.auth0.com/
+          issuer-uri: ${AUTH0_ISSUER_URI:https://dev-4mxqf6pdu0czpsbp.us.auth0.com/}
   application:
     name: bankstack-mcp-server
 

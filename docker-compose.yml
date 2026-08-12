@@ -1,0 +1,59 @@
+services:
+  # infrastructure Kafka depends on, coordination service to manage broker metadata
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: bankstack-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  # the message broker
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: bankstack-kafka
+    # compose zookeeper first, since Kafka needs it running to boot
+    depends_on:
+      - zookeeper
+    ports:
+      # hostPort:containerPort
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+      # kafka:29092 docker's internal container-to-container networking
+      # localhost:9092 for things outside docker, mac or spring boot, to reach it
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  # web dashboard for inspecting Kafka (topics, messages, consumers, groups)
+  kafka-ui:
+    image: provectuslabs/kafka-ui
+    container_name: bankstack-kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8079:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+
+  # single Postgres instance hosting every service database.
+  # pgvector image because ai_vector_db needs the vector extension (BankStackRag embeddings)
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: bankstack-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      # runs once on first startup of an empty volume:
+      # creates the per-service databases + enables the vector extension
+      - ./postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
+      - bankstack-pgdata:/var/lib/postgresql/data
+
+volumes:
+  bankstack-pgdata:

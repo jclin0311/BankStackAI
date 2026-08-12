@@ -16,7 +16,7 @@
 
     <groupId>com.commons</groupId>
     <artifactId>commons-security</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
     <packaging>jar</packaging>
     <name>commons-security</name>
     <description>Shared Security Configurations and Feign Interceptors</description>
