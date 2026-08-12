@@ -1,0 +1,82 @@
+server:
+  port: 8095
+  
+bankstack:
+  tool-security:
+    customer-role: ROLE_CUSTOMER
+    admin-role: ROLE_ADMIN
+    internal-staff-role: ROLE_INTERNAL_STAFF
+    # Auth0/Spring scopes are exposed as SCOPE_<scope>. Keep these exact, never substring-match.
+    customer-authorities:
+      - SCOPE_fdx:accounts.read
+      - SCOPE_fdx:customers.read
+    admin-authorities:
+      - SCOPE_admin:users.write
+    customer-external-id-claim: customer_id
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://dev-wgk04dj5v68sbhre.us.auth0.com/
+  application:
+    name: bankstack-mcp-server
+
+
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            connect-timeout: 30000
+            read-timeout: 300000
+            logger-level: basic
+
+  ai:
+    mcp:
+      server:
+        enabled: true
+        name: bankstack-mcp-server
+        version: 1.0.0
+        instructions: >
+          This server exposes BankStack tools for account lookup,
+          transaction retrieval, money movement, disputes, and
+          selected enterprise support connectors.
+        type: SYNC
+        protocol: STREAMABLE
+        streamable-http:
+          mcp-endpoint: /mcp
+        annotation-scanner:
+          enabled: true
+        capabilities:
+          tool: true
+          resource: true
+          prompt: false
+          completion: false
+
+downstream:
+  services:
+    account:
+      base-url: http://localhost:8084
+    customer:
+      base-url: http://localhost:8083
+    payment:
+      base-url: http://localhost:8086
+    transaction:
+      base-url: http://localhost:8084
+    rag:
+      base-url: http://localhost:8098
+    
+    
+    
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    root: INFO
+    com.mockbank.mcp: DEBUG

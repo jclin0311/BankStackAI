@@ -1,0 +1,55 @@
+server:
+  port: 8098
+
+bankstack:
+  rag:
+    relevance:
+      min-top-score: 0.45
+      min-context-similarity: 0.50
+    security:
+      admin-authorities: ROLE_ADMIN,SCOPE_rag:admin,SCOPE_admin:users.write
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://dev-wgk04dj5v68sbhre.us.auth0.com/
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ai_vector_db
+    username: postgres
+    password: postgres
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: true
+    open-in-view: false
+
+  ai:
+    model:
+      chat: ollama
+    ollama:
+      base-url: http://localhost:11434
+      embedding:
+        options:
+          model: nomic-embed-text
+      init:
+        pull-model-strategy: never
+      chat:
+        options:
+          model: llama3.2:latest
+          temperature: 0.2
+          top-p: 0.8
+          num-predict: 300
+
+  sql:
+    init:
+      mode: always
+      schema-locations:
+        - classpath:schema-rag-keyword.sql
+        - classpath:schema-rag-vector.sql

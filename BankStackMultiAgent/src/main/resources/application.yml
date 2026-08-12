@@ -1,0 +1,83 @@
+server:
+  port: 8096
+
+spring:
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ai_vector_db
+    username: postgres
+    password: postgres
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: true
+    open-in-view: false
+  application:
+    name: bankstack-agent
+
+  ai:
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        model: llama3.2:latest
+        options:
+          temperature: 0.0
+          top-p: 0.1
+          num-predict: 120
+          num-ctx: 1024
+
+    mcp:
+      client:
+        enabled: true
+        name: bankstack-agent
+        version: 1.0.0
+        type: SYNC
+        initialized: false
+        request-timeout: 15s
+        toolcallback:
+          enabled: true
+        streamable-http:
+          connections:
+            bankstack-server:
+              url: http://localhost:8095
+              endpoint: /mcp
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://dev-wgk04dj5v68sbhre.us.auth0.com/
+
+
+bankstack:
+  ai:
+    reasoning:
+      model: llama3.2:latest
+    extractor:
+      model: qwen2.5:1.5b
+
+  mcp:
+    server:
+      base-url: http://localhost:8095
+      
+
+  gateway:
+    conversation:
+      prepared-action-ttl-seconds: 600
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    root: INFO
+    com.bankstack: INFO
+    org.springframework.ai: INFO

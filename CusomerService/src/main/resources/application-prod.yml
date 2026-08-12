@@ -1,0 +1,49 @@
+spring:
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    producer:
+      properties:
+        allow.auto.create.topics: true
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: customer-service-group
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${JWK_SET_URI}
+
+application:
+  name: customer-service
+
+server:
+  port: ${SERVER_PORT:8083}
+
+resilience4j.circuitbreaker:
+  instances:
+    authServiceClient:
+      register-health-indicator: true
+      sliding-window-size: 5
+      minimum-number-of-calls: 3
+      failure-rate-threshold: 50
+      wait-duration-in-open-state: 5s
+
+auth:
+  service:
+    url: http://localhost:8083/api/v1
+
+

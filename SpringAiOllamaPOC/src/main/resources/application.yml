@@ -1,0 +1,19 @@
+server:
+  port: 8060
+
+spring:
+  ai:
+    model:
+      chat: ollama
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        options:
+          model: llama3.2:latest
+          temperature: 0.2
+          top-p: 0.8
+          num-predict: 300
+          
+
+
+ 

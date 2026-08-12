@@ -1,0 +1,85 @@
+server:
+  port: 8086   
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://dev-wgk04dj5v68sbhre.us.auth0.com/
+          
+      client:
+        registration:
+          account-m2m:
+            provider: auth0
+            authorization-grant-type: client_credentials
+            client-id: COElk9GHOmWS9L4MAQvscuxA49Cl4mfI
+            client-secret: XXXXXXXXXX
+            scope: admin:accounts
+
+        provider:
+          auth0:
+            token-uri: https://dev-wgk04dj5v68sbhre.us.auth0.com/oauth/token
+            
+            
+  application:
+    name: payment-orchestrator
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/paymentdb
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update        # dev/demo ke liye; prod mein validate/none
+    show-sql: true
+    properties:
+      hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+    consumer:
+      group-id: ${PAYMENT_ORCH_CONSUMER_GROUP:payment-orch-consumers-v1}
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+    listener:
+      type: single  
+      
+      
+payments:
+  topics:
+    billpay-requested: billpay.requested
+    billpay-enqueued: billpay.enqueued
+    bill-batch-ready: bill.batch.ready
+    bill-batch-submitted: bill.batch.submitted
+    billpay-status: billpay.status
+    bill-batch-retry: bill.batch.retry
+    bill-batch-resubmit: bill.batch.resubmit
+    bill-batch-dlq: bill.batch.dlq
+    
+account:
+  service:
+    url: http://localhost:8084
+    
+    
+biller:
+  service:
+    url: http://localhost:8088
+    
+
+
+auth0:
+  audience: https://mockbank/api
+
+
+
+
+    

@@ -1,0 +1,32 @@
+server:
+  port: 8088
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://dev-wgk04dj5v68sbhre.us.auth0.com/
+  application:
+    name: biller-service
+
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/billerdb
+    username: postgres
+    password: postgres
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+logging:
+  level:
+    org.springframework.security.oauth2: DEBUG
+    org.springframework.security: DEBUG
+
+    
+    
+auth0:
+  audience: https://mockbank/api

@@ -1,0 +1,30 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: account-service
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update  # or `validate` or `none` in prod
+    show-sql: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+
+ 
+          
+logging:
+  level:
+     org.springframework.security.oauth2.jwt: TRACE
+     org.springframework.security.oauth2.server.resource.authentication: TRACE
+     org.springframework.security: INFO
+customer:
+  service:
+    url: http://customer-service:8083
+

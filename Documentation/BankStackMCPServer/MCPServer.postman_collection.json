@@ -1,0 +1,696 @@
+{
+  "info": {
+    "_postman_id": "dde4c128-65ee-4f74-bfec-b4cf5e1a2522",
+    "name": "MCPServer",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "36698671"
+  },
+  "item": [
+    {
+      "name": "Find my Balance",
+      "request": {
+        "auth": {
+          "type": "oauth2",
+          "oauth2": [
+            {
+              "key": "scope",
+              "value": "fdx:accounts.read",
+              "type": "string"
+            },
+            {
+              "key": "clientId",
+              "value": "5zExE3fQ8lD3Jn5iIvr5PfMA6bsMaeZ2",
+              "type": "string"
+            },
+            {
+              "key": "authUrl",
+              "value": "https://dev-wgk04dj5v68sbhre.us.auth0.com/authorize?audience=https://mockbank/api",
+              "type": "string"
+            },
+            {
+              "key": "tokenRequestParams",
+              "value": [
+                {
+                  "key": "audience",
+                  "value": "https://mockbank/api",
+                  "enabled": false,
+                  "send_as": "request_body"
+                }
+              ],
+              "type": "any"
+            },
+            {
+              "key": "refreshRequestParams",
+              "value": [],
+              "type": "any"
+            },
+            {
+              "key": "authRequestParams",
+              "value": [],
+              "type": "any"
+            },
+            {
+              "key": "client_authentication",
+              "value": "body",
+              "type": "string"
+            },
+            {
+              "key": "redirect_uri",
+              "value": "https://oauth.pstmn.io/v1/callback",
+              "type": "string"
+            },
+            {
+              "key": "accessTokenUrl",
+              "value": "https://dev-wgk04dj5v68sbhre.us.auth0.com/oauth/token",
+              "type": "string"
+            },
+            {
+              "key": "grant_type",
+              "value": "authorization_code_with_pkce",
+              "type": "string"
+            },
+            {
+              "key": "addTokenTo",
+              "value": "header",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tool\": \"getAccountBalance\",\n  \"input\": {\n    \"accountId\": \"a4403681-262c-46b9-8160-8ff08ede27c6\"\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8095/api/v1/mcp/invoke",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8095",
+          "path": [
+            "api",
+            "v1",
+            "mcp",
+            "invoke"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Ownership Failure — Other Account",
+      "request": {
+        "auth": {
+          "type": "oauth2",
+          "oauth2": [
+            {
+              "key": "scope",
+              "value": "admin:users.write",
+              "type": "string"
+            },
+            {
+              "key": "clientId",
+              "value": "5zExE3fQ8lD3Jn5iIvr5PfMA6bsMaeZ2",
+              "type": "string"
+            },
+            {
+              "key": "authUrl",
+              "value": "https://dev-wgk04dj5v68sbhre.us.auth0.com/authorize?audience=https://mockbank/api",
+              "type": "string"
+            },
+            {
+              "key": "tokenRequestParams",
+              "value": [
+                {
+                  "key": "audience",
+                  "value": "https://mockbank/api",
+                  "enabled": false,
+                  "send_as": "request_body"
+                }
+              ],
+              "type": "any"
+            },
+            {
+              "key": "refreshRequestParams",
+              "value": [],
+              "type": "any"
+            },
+            {
+              "key": "authRequestParams",
+              "value": [],
+              "type": "any"
+            },
+            {
+              "key": "client_authentication",
+              "value": "body",
+              "type": "string"
+            },
+            {
+              "key": "redirect_uri",
+              "value": "https://oauth.pstmn.io/v1/callback",
+              "type": "string"
+            },
+            {
+              "key": "accessTokenUrl",
+              "value": "https://dev-wgk04dj5v68sbhre.us.auth0.com/oauth/token",
+              "type": "string"
+            },
+            {
+              "key": "grant_type",
+              "value": "authorization_code_with_pkce",
+              "type": "string"
+            },
+            {
+              "key": "addTokenTo",
+              "value": "header",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tool\": \"getAccountBalance\",\n  \"input\": {\n    \"accountId\": \"a4403681-262c-46b9-8160-8ff08ede27c9\"\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8095/api/v1/mcp/invoke",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8095",
+          "path": [
+            "api",
+            "v1",
+            "mcp",
+            "invoke"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Transactions",
+      "request": {
+        "auth": {
+          "type": "oauth2",
+          "oauth2": [
+            {
+              "key": "scope",
+              "value": "admin:users.write",
+              "type": "string"
+            },
+            {
+              "key": "clientId",
+              "value": "5zExE3fQ8lD3Jn5iIvr5PfMA6bsMaeZ2",
+              "type": "string"
+            },
+            {
+              "key": "authUrl",
+              "value": "https://dev-wgk04dj5v68sbhre.us.auth0.com/authorize?audience=https://mockbank/api",
+              "type": "string"
+            },
+            {
+              "key": "tokenRequestParams",
+              "value": [
+                {
+                  "key": "audience",
+                  "value": "https://mockbank/api",
+                  "enabled": false,
+                  "send_as": "request_body"
+                }
+              ],
+              "type": "any"
+            },
+            {
+              "key": "refreshRequestParams",
+              "value": [],
+              "type": "any"
+            },
+            {
+              "key": "authRequestParams",
+              "value": [],
+              "type": "any"
+            },
+            {
+              "key": "client_authentication",
+              "value": "body",
+              "type": "string"
+            },
+            {
+              "key": "redirect_uri",
+              "value": "https://oauth.pstmn.io/v1/callback",
+              "type": "string"
+            },
+            {
+              "key": "accessTokenUrl",
+              "value": "https://dev-wgk04dj5v68sbhre.us.auth0.com/oauth/token",
+              "type": "string"
+            },
+            {
+              "key": "grant_type",
+              "value": "authorization_code_with_pkce",
+              "type": "string"
+            },
+            {
+              "key": "addTokenTo",
+              "value": "header",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tool\": \"getTransactions\",\n  \"input\": {\n    \"accountId\": \"a4403681-262c-46b9-8160-8ff08ede27c6\"\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8095/api/v1/mcp/invoke",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8095",
+          "path": [
+            "api",
+            "v1",
+            "mcp",
+            "invoke"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get customer profile",
+      "request": {
+        "auth": {
+          "type": "oauth2",
+          "oauth2": [
+            {
+              "key": "scope",
+              "value": "fdx:customers.read",
+              "type": "string"
+            },
+            {
+              "key": "clientId",
+              "value": "5zExE3fQ8lD3Jn5iIvr5PfMA6bsMaeZ2",
+              "type": "string"
+            },
+            {
+              "key": "authUrl",
+              "value": "https://dev-wgk04dj5v68sbhre.us.auth0.com/authorize?audience=https://mockbank/api",
+              "type": "string"
+            },
+            {
+              "key": "tokenRequestParams",
+              "value": [
+                {
+                  "key": "audience",
+                  "value": "https://mockbank/api",
+                  "enabled": false,
+                  "send_as": "request_body"
+                }
+              ],
+              "type": "any"
+            },
+            {
+              "key": "refreshRequestParams",
+              "value": [],
+              "type": "any"
+            },
+            {
+              "key": "authRequestParams",
+              "value": [],
+              "type": "any"
+            },
+            {
+              "key": "client_authentication",
+              "value": "body",
+              "type": "string"
+            },
+            {
+              "key": "redirect_uri",
+              "value": "https://oauth.pstmn.io/v1/callback",
+              "type": "string"
+            },
+            {
+              "key": "accessTokenUrl",
+              "value": "https://dev-wgk04dj5v68sbhre.us.auth0.com/oauth/token",
+              "type": "string"
+            },
+            {
+              "key": "grant_type",
+              "value": "authorization_code_with_pkce",
+              "type": "string"
+            },
+            {
+              "key": "addTokenTo",
+              "value": "header",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tool\": \"getCustomerProfile\",\n  \"input\": {\n    \"customerExternalId\": \"jill\"\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8095/api/v1/mcp/invoke",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8095",
+          "path": [
+            "api",
+            "v1",
+            "mcp",
+            "invoke"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Search policy documents",
+      "request": {
+        "auth": {
+          "type": "oauth2",
+          "oauth2": [
+            {
+              "key": "scope",
+              "value": "fdx:customers.read",
+              "type": "string"
+            },
+            {
+              "key": "clientId",
+              "value": "5zExE3fQ8lD3Jn5iIvr5PfMA6bsMaeZ2",
+              "type": "string"
+            },
+            {
+              "key": "authUrl",
+              "value": "https://dev-wgk04dj5v68sbhre.us.auth0.com/authorize?audience=https://mockbank/api",
+              "type": "string"
+            },
+            {
+              "key": "tokenRequestParams",
+              "value": [
+                {
+                  "key": "audience",
+                  "value": "https://mockbank/api",
+                  "enabled": false,
+                  "send_as": "request_body"
+                }
+              ],
+              "type": "any"
+            },
+            {
+              "key": "refreshRequestParams",
+              "value": [],
+              "type": "any"
+            },
+            {
+              "key": "authRequestParams",
+              "value": [],
+              "type": "any"
+            },
+            {
+              "key": "client_authentication",
+              "value": "body",
+              "type": "string"
+            },
+            {
+              "key": "redirect_uri",
+              "value": "https://oauth.pstmn.io/v1/callback",
+              "type": "string"
+            },
+            {
+              "key": "accessTokenUrl",
+              "value": "https://dev-wgk04dj5v68sbhre.us.auth0.com/oauth/token",
+              "type": "string"
+            },
+            {
+              "key": "grant_type",
+              "value": "authorization_code_with_pkce",
+              "type": "string"
+            },
+            {
+              "key": "addTokenTo",
+              "value": "header",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tool\": \"searchPolicyDocuments\",\n  \"input\": {\n    \"query\": \"When is login disabled for a customer?\"\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8095/api/v1/mcp/invoke",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8095",
+          "path": [
+            "api",
+            "v1",
+            "mcp",
+            "invoke"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Initiate Paynent",
+      "request": {
+        "auth": {
+          "type": "oauth2",
+          "oauth2": [
+            {
+              "key": "scope",
+              "value": "admin:users.write",
+              "type": "string"
+            },
+            {
+              "key": "clientId",
+              "value": "5zExE3fQ8lD3Jn5iIvr5PfMA6bsMaeZ2",
+              "type": "string"
+            },
+            {
+              "key": "authUrl",
+              "value": "https://dev-wgk04dj5v68sbhre.us.auth0.com/authorize?audience=https://mockbank/api",
+              "type": "string"
+            },
+            {
+              "key": "tokenRequestParams",
+              "value": [
+                {
+                  "key": "audience",
+                  "value": "https://mockbank/api",
+                  "enabled": false,
+                  "send_as": "request_body"
+                }
+              ],
+              "type": "any"
+            },
+            {
+              "key": "refreshRequestParams",
+              "value": [],
+              "type": "any"
+            },
+            {
+              "key": "authRequestParams",
+              "value": [],
+              "type": "any"
+            },
+            {
+              "key": "client_authentication",
+              "value": "body",
+              "type": "string"
+            },
+            {
+              "key": "redirect_uri",
+              "value": "https://oauth.pstmn.io/v1/callback",
+              "type": "string"
+            },
+            {
+              "key": "accessTokenUrl",
+              "value": "https://dev-wgk04dj5v68sbhre.us.auth0.com/oauth/token",
+              "type": "string"
+            },
+            {
+              "key": "grant_type",
+              "value": "authorization_code_with_pkce",
+              "type": "string"
+            },
+            {
+              "key": "addTokenTo",
+              "value": "header",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tool\": \"prepareBillPay\",\n  \"input\": {\n    \"debtorAccountId\": \"a4403681-262c-46b9-8160-8ff08ede27c6\",\n    \"billerReferenceNumber\": \"HT123456789\",\n    \"invoiceReference\": \"INV-2026-0092\",\n    \"executionDate\": \"2026-06-24\",\n    \"amount\": 10,\n    \"currency\": \"CAD\",\n    \"note\": \"April hydro bill\"\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8095/api/v1/mcp/invoke",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8095",
+          "path": [
+            "api",
+            "v1",
+            "mcp",
+            "invoke"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Confirm Payment",
+      "request": {
+        "auth": {
+          "type": "oauth2",
+          "oauth2": [
+            {
+              "key": "scope",
+              "value": "admin:users.write",
+              "type": "string"
+            },
+            {
+              "key": "clientId",
+              "value": "5zExE3fQ8lD3Jn5iIvr5PfMA6bsMaeZ2",
+              "type": "string"
+            },
+            {
+              "key": "authUrl",
+              "value": "https://dev-wgk04dj5v68sbhre.us.auth0.com/authorize?audience=https://mockbank/api",
+              "type": "string"
+            },
+            {
+              "key": "tokenRequestParams",
+              "value": [
+                {
+                  "key": "audience",
+                  "value": "https://mockbank/api",
+                  "enabled": false,
+                  "send_as": "request_body"
+                }
+              ],
+              "type": "any"
+            },
+            {
+              "key": "refreshRequestParams",
+              "value": [],
+              "type": "any"
+            },
+            {
+              "key": "authRequestParams",
+              "value": [],
+              "type": "any"
+            },
+            {
+              "key": "client_authentication",
+              "value": "body",
+              "type": "string"
+            },
+            {
+              "key": "redirect_uri",
+              "value": "https://oauth.pstmn.io/v1/callback",
+              "type": "string"
+            },
+            {
+              "key": "accessTokenUrl",
+              "value": "https://dev-wgk04dj5v68sbhre.us.auth0.com/oauth/token",
+              "type": "string"
+            },
+            {
+              "key": "grant_type",
+              "value": "authorization_code_with_pkce",
+              "type": "string"
+            },
+            {
+              "key": "addTokenTo",
+              "value": "header",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tool\": \"confirmBillPay\",\n  \"input\": {\n    \"confirmationToken\": \"d54b84fe-a419-4974-90b0-e47fe2f786e2\"\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8095/api/v1/mcp/invoke",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8095",
+          "path": [
+            "api",
+            "v1",
+            "mcp",
+            "invoke"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+<configuration scan="true">
+  <!-- If the lib packaged it at the classpath root -->
+  <include resource="logback-base.xml"/>
+
+  <!-- If that doesn't resolve, use the fully-qualified path inside the JAR:
+  <include resource="com/commons/observability/logging/logback-base.xml"/>
+  -->
+
+  <!-- Optional local tweaks -->
+  <logger name="com.zaxxer.hikari.pool.HikariPool" level="ERROR"/>
+  <root level="INFO"/>
+</configuration>

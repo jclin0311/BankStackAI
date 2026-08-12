@@ -1,0 +1,41 @@
+# Maven build output
+target/
+
+# Compiled class files
+*.class
+
+# Packaged artifacts
+*.jar
+*.war
+*.ear
+
+# Logs
+*.log
+logs/
+
+# IDE - VSCode / Cursor
+.vscode/
+
+# IDE - IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# IDE - Eclipse
+.classpath
+.project
+.settings/
+.factorypath
+
+# macOS
+.DS_Store
+
+# Environment / secrets
+.env
+.env.local
+*.env
+
+# Local overrides
+application-local.yml
+application-local.yaml
