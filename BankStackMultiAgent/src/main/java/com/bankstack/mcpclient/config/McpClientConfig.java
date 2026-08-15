@@ -36,7 +36,8 @@ public class McpClientConfig {
 
     @Bean
     McpSyncHttpClientRequestCustomizer mcpSyncHttpClientRequestCustomizer(
-            McpServerConnectionProperties properties
+            McpServerConnectionProperties properties,
+            SecurityTokenProvider tokenProvider
     ) {
         return (builder, method, endpoint, body, context) -> {
             String configuredBaseUrl = properties.baseUrl();
@@ -54,6 +55,20 @@ public class McpClientConfig {
             }
 
             Object authorization = context.get(AUTHORIZATION_CONTEXT_KEY);
+            if (authorization == null) {
+                /*
+                 * The transport context only reaches requests whose reactor chain was
+                 * subscribed through the customized client; tools/call is issued by a
+                 * separate client instance and arrives here with an empty context — but
+                 * on the servlet request thread. Fall back to the thread's own
+                 * SecurityContext: correct per-thread, and empty on transport worker
+                 * threads (handshake traffic), which the MCP server permits anonymously.
+                 */
+                String token = resolveBearerToken(tokenProvider);
+                if (token != null && !token.isBlank()) {
+                    authorization = "Bearer " + token;
+                }
+            }
             if (authorization != null) {
                 builder.header("Authorization", authorization.toString());
             }

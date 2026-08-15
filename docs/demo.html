@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BankStackAI — Runtime Walkthrough</title>
+<style>
+  :root { --bg:#0f172a; --bg-soft:#1e293b; --fg:#e2e8f0; --muted:#94a3b8; --accent:#38bdf8; --border:#334155;
+           --http:#0ea5e9; --kafka:#f59e0b; --db:#10b981; --llm:#a78bfa; --audit:#f43f5e; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:#f8fafc; color:#0f172a; }
+  header { background:var(--bg); color:var(--fg); padding:1.75rem clamp(1rem,4vw,3rem) 1.25rem; border-bottom:1px solid var(--border); }
+  header h1 { margin:0 0 .35rem; font-size:1.5rem; }
+  header h1 span { color:var(--accent); }
+  header p { margin:0; color:var(--muted); font-size:.9rem; max-width:70ch; line-height:1.5; }
+  header a { color:var(--accent); }
+  main { max-width:60rem; margin:0 auto; padding:1.5rem clamp(1rem,4vw,3rem) 4rem; }
+  h2 { margin-top:2.5rem; font-size:1.2rem; }
+  .lead { color:#475569; max-width:70ch; line-height:1.55; }
+  ol.flow { list-style:none; margin:1.5rem 0 0; padding:0; position:relative; }
+  ol.flow::before { content:""; position:absolute; left:1.05rem; top:.5rem; bottom:.5rem; width:2px; background:#cbd5e1; }
+  .step { display:flex; gap:1rem; margin-bottom:1.6rem; position:relative; }
+  .marker { flex:none; width:2.1rem; height:2.1rem; border-radius:50%; background:var(--bg); color:#fff;
+             display:flex; align-items:center; justify-content:center; font-weight:600; font-size:.9rem; z-index:1; }
+  .body { flex:1; min-width:0; }
+  .body h3 { margin:.15rem 0 .1rem; font-size:1rem; }
+  .actor { margin:0 0 .3rem; font-size:.78rem; color:#64748b; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .body > p { margin:.2rem 0 .6rem; font-size:.9rem; line-height:1.5; color:#334155; max-width:65ch; }
+  details { margin:.4rem 0; border:1px solid #e2e8f0; border-radius:8px; background:#fff; overflow:hidden; }
+  summary { cursor:pointer; padding:.5rem .75rem; font-size:.85rem; user-select:none; }
+  summary:hover { background:#f1f5f9; }
+  .kind { display:inline-block; font-size:.68rem; font-weight:700; letter-spacing:.03em; padding:.1rem .45rem;
+           border-radius:4px; color:#fff; margin-right:.4rem; vertical-align:1px; }
+  .kind.http { background:var(--http); } .kind.kafka { background:var(--kafka); }
+  .kind.db { background:var(--db); } .kind.llm { background:var(--llm); } .kind.audit { background:var(--audit); }
+  pre { margin:0; padding: .75rem; background:#0f172a; color:#e2e8f0; font-size:.75rem; line-height:1.45;
+        overflow-x:auto; white-space:pre-wrap; word-break:break-word; }
+  .note { margin:.4rem .75rem 0; font-size:.78rem; color:#b45309; }
+  code { background:#e2e8f0; padding:.05rem .3rem; border-radius:4px; font-size:.85em; }
+  .back { font-size:.85rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1>BankStack<span>AI</span> — Runtime Walkthrough</h1>
+  <p>Every payload below was captured from the running Kubernetes deployment on 2026-08-15 —
+  real HTTP responses, real Kafka messages, real database rows and audit lines. Nothing is a mockup;
+  the one simulated input (the clearing-house acknowledgement) is labelled.
+  <a href="index.html">API reference</a> · <a href="https://github.com/jclin0311/BankStackAI">source</a></p>
+</header>
+<main>
+  <section>
+    <h2>1 · A bill payment, end to end</h2>
+    <p class="lead">$45 electricity bill paid from a chequing account: synchronous accept with funds
+    held, then an event-driven saga across four services and six Kafka topics, ending in a settled
+    payment and a balanced ledger.</p>
+    <ol class="flow">
+    <li class="step">
+      <div class="marker">1</div>
+      <div class="body">
+        <h3>Payment accepted, funds held</h3>
+        <p class="actor">client → payment-orchestrator :8086</p>
+        <p>A bill payment is submitted with an <code>Idempotency-Key</code>. The orchestrator validates the biller against biller-service, places a hold on the debtor account via account-service (M2M OAuth2 client-credentials), persists the payment in <code>FUNDS_HELD</code>, and answers 202 with a status URL.</p>
+        <details><summary><span class="kind http">HTTP</span> POST /api/v1/payments/billpay — request</summary><pre>{
+  &quot;debtorAccountId&quot;: &quot;7e4c5d9a-d9ae-4d4f-b6e0-4c472d6f1519&quot;,
+  &quot;billerReferenceNumber&quot;: &quot;HYDRO-001&quot;,
+  &quot;invoiceReference&quot;: &quot;INV-2026-0815&quot;,
+  &quot;executionDate&quot;: &quot;2026-08-15&quot;,
+  &quot;amount&quot;: {
+    &quot;currency&quot;: &quot;CAD&quot;,
+    &quot;value&quot;: 45.0
+  },
+  &quot;note&quot;: &quot;August electricity bill&quot;
+}</pre></details><details><summary><span class="kind http">HTTP</span> 202 Accepted — response</summary><pre>{
+  &quot;paymentId&quot;: &quot;0b8c5c51-0c7d-4bf3-b06d-2f7e7183bca0&quot;,
+  &quot;state&quot;: &quot;FUNDS_HELD&quot;,
+  &quot;statusUrl&quot;: &quot;/api/v1/payments/0b8c5c51-0c7d-4bf3-b06d-2f7e7183bca0&quot;
+}</pre></details>
+      </div>
+    </li>
+    <li class="step">
+      <div class="marker">2</div>
+      <div class="body">
+        <h3>billpay.requested</h3>
+        <p class="actor">payment-orchestrator → Kafka</p>
+        <p>The accepted payment is written to a transactional outbox and published. From here the flow is fully asynchronous.</p>
+        <details><summary><span class="kind kafka">KAFKA</span> topic billpay.requested — actual message</summary><pre>{
+  &quot;eventId&quot;: &quot;34d746a9-6007-43fc-ac08-8391f01aeb18&quot;,
+  &quot;paymentId&quot;: &quot;0b8c5c51-0c7d-4bf3-b06d-2f7e7183bca0&quot;,
+  &quot;correlationId&quot;: null,
+  &quot;debtorAccountId&quot;: &quot;7e4c5d9a-d9ae-4d4f-b6e0-4c472d6f1519&quot;,
+  &quot;billerRefNumber&quot;: &quot;HYDRO-001&quot;,
+  &quot;invoiceReference&quot;: &quot;INV-2026-0815&quot;,
+  &quot;executionDate&quot;: &quot;2026-08-15&quot;,
+  &quot;amountValue&quot;: 45.0,
+  &quot;amountCcy&quot;: &quot;CAD&quot;,
+  &quot;occurredAt&quot;: &quot;2026-08-15T04:46:03.520843282Z&quot;,
+  &quot;schemaVersion&quot;: &quot;1&quot;,
+  &quot;channel&quot;: &quot;billpay&quot;
+}</pre></details>
+      </div>
+    </li>
+    <li class="step">
+      <div class="marker">3</div>
+      <div class="body">
+        <h3>billpay.enqueued</h3>
+        <p class="actor">billpay-worker</p>
+        <p>The worker consumes the request, assigns it to a batch, and acknowledges with an enqueued event carrying the new <code>batchId</code>.</p>
+        <details><summary><span class="kind kafka">KAFKA</span> topic billpay.enqueued — actual message</summary><pre>{
+  &quot;eventId&quot;: &quot;116b08cb-fe12-4932-ae30-312b1fd48722&quot;,
+  &quot;paymentId&quot;: &quot;0b8c5c51-0c7d-4bf3-b06d-2f7e7183bca0&quot;,
+  &quot;batchId&quot;: &quot;1bedf62d-e0f7-4be3-81a0-6522f6c4d143&quot;,
+  &quot;correlationId&quot;: null,
+  &quot;occurredAt&quot;: &quot;2026-08-15T04:46:07.551793307Z&quot;,
+  &quot;schemaVersion&quot;: &quot;1&quot;,
+  &quot;channel&quot;: &quot;billpay&quot;
+}</pre></details>
+      </div>
+    </li>
+    <li class="step">
+      <div class="marker">4</div>
+      <div class="body">
+        <h3>bill.batch.ready</h3>
+        <p class="actor">billpay-worker → Kafka</p>
+        <p>When the batch threshold is met, the worker declares the batch ready for settlement.</p>
+        <details><summary><span class="kind kafka">KAFKA</span> topic bill.batch.ready — actual message</summary><pre>{
+  &quot;eventId&quot;: &quot;33e3ba94-0422-449c-9ebb-16eaf55564eb&quot;,
+  &quot;batchId&quot;: &quot;1bedf62d-e0f7-4be3-81a0-6522f6c4d143&quot;,
+  &quot;correlationId&quot;: null,
+  &quot;occurredAt&quot;: &quot;2026-08-15T04:46:07.593063535Z&quot;,
+  &quot;schemaVersion&quot;: &quot;1&quot;,
+  &quot;channel&quot;: &quot;billpay&quot;
+}</pre></details>
+      </div>
+    </li>
+    <li class="step">
+      <div class="marker">5</div>
+      <div class="body">
+        <h3>Batch submitted to Central 1</h3>
+        <p class="actor">settlement-service</p>
+        <p>Settlement consumes the ready batch, generates a pain.001 payment file, uploads it to the clearing house (stubbed Central 1 client), records the submission, and emits the central reference.</p>
+        <details><summary><span class="kind kafka">KAFKA</span> topic bill.batch.submitted — actual message</summary><pre>{
+  &quot;batchId&quot;: &quot;1bedf62d-e0f7-4be3-81a0-6522f6c4d143&quot;,
+  &quot;centralReference&quot;: &quot;CENTRAL1-1786769168112&quot;,
+  &quot;submittedAt&quot;: &quot;2026-08-15T04:46:08.114265777Z&quot;
+}</pre></details><details><summary><span class="kind db">DB</span> settlementdb.bill_batch_settlement — actual row</summary><pre>batch_id          | 1bedf62d-e0f7-4be3-81a0-6522f6c4d143
+central_reference | CENTRAL1-1786769168112
+pain001file_name  | pain0011bedf62d-e0f7-4be3-81a0-6522f6c4d143.xml
+status            | SUBMITTED</pre></details>
+      </div>
+    </li>
+    <li class="step">
+      <div class="marker">6</div>
+      <div class="body">
+        <h3>pain.002 acknowledgement</h3>
+        <p class="actor">Central 1 → Kafka (simulated)</p>
+        <p>In production the clearing house answers asynchronously with a pain.002 status file. For this walkthrough the ack was published to <code>central1.pain002</code> by hand — everything before and after it is the real system reacting.</p>
+        <details><summary><span class="kind kafka">KAFKA</span> topic central1.pain002 — injected message</summary><p class="note">Simulated external input — the one hand-crafted message in this walkthrough.</p><pre>{
+  &quot;batchId&quot;: &quot;1bedf62d-e0f7-4be3-81a0-6522f6c4d143&quot;,
+  &quot;items&quot;: [
+    {
+      &quot;paymentId&quot;: &quot;0b8c5c51-0c7d-4bf3-b06d-2f7e7183bca0&quot;,
+      &quot;batchId&quot;: &quot;1bedf62d-e0f7-4be3-81a0-6522f6c4d143&quot;,
+      &quot;originalEndToEndId&quot;: &quot;INV-2026-0815&quot;,
+      &quot;statusCode&quot;: &quot;ACTC&quot;,
+      &quot;statusDescription&quot;: &quot;Accepted technical validation&quot;,
+      &quot;success&quot;: true,
+      &quot;reason&quot;: &quot;Settled by Central 1&quot;,
+      &quot;receivedAt&quot;: &quot;2026-08-15T04:50:00Z&quot;
+    }
+  ],
+  &quot;generatedAt&quot;: &quot;2026-08-15T04:50:00Z&quot;
+}</pre></details>
+      </div>
+    </li>
+    <li class="step">
+      <div class="marker">7</div>
+      <div class="body">
+        <h3>billpay.status: POSTED</h3>
+        <p class="actor">settlement-service → Kafka</p>
+        <p>Settlement maps the pain.002 item to a payment status event.</p>
+        <details><summary><span class="kind kafka">KAFKA</span> topic billpay.status — actual message</summary><pre>{
+  &quot;eventId&quot;: &quot;3d927099-8737-40c8-a631-a982a5f9e170&quot;,
+  &quot;paymentId&quot;: &quot;0b8c5c51-0c7d-4bf3-b06d-2f7e7183bca0&quot;,
+  &quot;batchId&quot;: &quot;1bedf62d-e0f7-4be3-81a0-6522f6c4d143&quot;,
+  &quot;status&quot;: &quot;POSTED&quot;,
+  &quot;reason&quot;: &quot;Settled by Central 1&quot;,
+  &quot;updatedAt&quot;: &quot;2026-08-15T04:49:16.203548068Z&quot;
+}</pre></details>
+      </div>
+    </li>
+    <li class="step">
+      <div class="marker">8</div>
+      <div class="body">
+        <h3>Payment finalized, hold converted to debit</h3>
+        <p class="actor">payment-orchestrator</p>
+        <p>The orchestrator consumes the status, releases the hold, posts the debit on the account, and marks the payment <code>POSTED</code>. Balance moved 350.00 → 305.00.</p>
+        <details><summary><span class="kind http">HTTP</span> GET /api/v1/payments/{id} — final state</summary><pre>{
+  &quot;paymentId&quot;: &quot;0b8c5c51-0c7d-4bf3-b06d-2f7e7183bca0&quot;,
+  &quot;state&quot;: &quot;POSTED&quot;,
+  &quot;debtorAccountId&quot;: &quot;7e4c5d9a-d9ae-4d4f-b6e0-4c472d6f1519&quot;,
+  &quot;billerRefNumber&quot;: &quot;HYDRO-001&quot;,
+  &quot;invoiceReference&quot;: &quot;INV-2026-0815&quot;,
+  &quot;executionDate&quot;: &quot;2026-08-15&quot;,
+  &quot;amountValue&quot;: 45.0,
+  &quot;amountCcy&quot;: &quot;CAD&quot;,
+  &quot;batchId&quot;: &quot;1bedf62d-e0f7-4be3-81a0-6522f6c4d143&quot;,
+  &quot;externalStatusCode&quot;: null,
+  &quot;reason&quot;: &quot;Settled by Central 1&quot;,
+  &quot;idempotencyKey&quot;: &quot;demo-1786769162&quot;,
+  &quot;createdAt&quot;: &quot;2026-08-15T04:46:03.520843Z&quot;,
+  &quot;updatedAt&quot;: &quot;2026-08-15T04:49:17.010756Z&quot;
+}</pre></details><details><summary><span class="kind http">HTTP</span> GET /accounts/{id}/balance — after settlement</summary><pre>{
+  &quot;balance&quot;: 305.0,
+  &quot;totalHolds&quot;: 0,
+  &quot;available&quot;: 305.0
+}</pre></details><details><summary><span class="kind http">HTTP</span> GET /accounts/{id}/transactions — ledger</summary><pre>[
+  {
+    &quot;id&quot;: &quot;18c0aea0-aaa7-43eb-988a-6b3a7d272404&quot;,
+    &quot;status&quot;: &quot;POSTED&quot;,
+    &quot;amount&quot;: 45.0,
+    &quot;reason&quot;: null,
+    &quot;balanceAfter&quot;: 305.0
+  },
+  {
+    &quot;id&quot;: &quot;7964e082-2549-4199-8abe-2dcb252502a2&quot;,
+    &quot;status&quot;: &quot;POSTED&quot;,
+    &quot;amount&quot;: 45.0,
+    &quot;reason&quot;: &quot;manual_release&quot;,
+    &quot;balanceAfter&quot;: 350.0
+  },
+  {
+    &quot;id&quot;: &quot;8292e4c9-1214-4f5a-89b4-36455a9695a6&quot;,
+    &quot;status&quot;: &quot;POSTED&quot;,
+    &quot;amount&quot;: 45.0,
+    &quot;reason&quot;: &quot;BILLPAY&quot;,
+    &quot;balanceAfter&quot;: 350.0
+  },
+  {
+    &quot;id&quot;: &quot;7233ed05-da0e-4dca-9d36-8d501db1c321&quot;,
+    &quot;status&quot;: &quot;POSTED&quot;,
+    &quot;amount&quot;: 250.0,
+    &quot;reason&quot;: &quot;demo top-up&quot;,
+    &quot;balanceAfter&quot;: 350.0
+  }
+]</pre></details>
+      </div>
+    </li></ol>
+  </section>
+  <section>
+    <h2>2 · A natural-language request through the AI layer</h2>
+    <p class="lead">One sentence travels multi-agent → Ollama → MCP server → account-service and back.
+    The caller's JWT is relayed across every hop, so the AI layer never escalates privileges.</p>
+    <ol class="flow">
+    <li class="step">
+      <div class="marker">1</div>
+      <div class="body">
+        <h3>Natural-language request</h3>
+        <p class="actor">client → multi-agent :8096</p>
+        <p>One sentence in; the gateway authenticates the caller's Auth0 JWT and passes the message to the agent.</p>
+        <details><summary><span class="kind http">HTTP</span> POST /api/v1/agent/chat — request</summary><pre>{
+  &quot;message&quot;: &quot;Show me the recent transactions for account 7e4c5d9a-d9ae-4d4f-b6e0-4c472d6f1519&quot;
+}</pre></details>
+      </div>
+    </li>
+    <li class="step">
+      <div class="marker">2</div>
+      <div class="body">
+        <h3>Intent routing and argument extraction</h3>
+        <p class="actor">multi-agent → Ollama (llama3.2, local)</p>
+        <p>The LLM decides this is a tool call and extracts structured arguments — note the correct <code>accountId</code> pulled out of free text.</p>
+        <details><summary><span class="kind llm">LLM</span> routing decision — from the actual response</summary><pre>{
+  &quot;route&quot;: &quot;TOOL&quot;,
+  &quot;toolName&quot;: &quot;getTransactions&quot;,
+  &quot;toolArguments&quot;: {
+    &quot;limit&quot;: 20,
+    &quot;accountId&quot;: &quot;7e4c5d9a-d9ae-4d4f-b6e0-4c472d6f1519&quot;,
+    &quot;actorId&quot;: &quot;ZHJ1GOVzB0b4iJTAWdfKJw2IYPa5k6OC@clients&quot;,
+    &quot;offset&quot;: 0
+  }
+}</pre></details>
+      </div>
+    </li>
+    <li class="step">
+      <div class="marker">3</div>
+      <div class="body">
+        <h3>MCP tools/call with the caller's JWT relayed</h3>
+        <p class="actor">multi-agent → mcp-server :8095</p>
+        <p>The agent invokes the tool over MCP (streamable HTTP). The user's bearer token rides the request, so the MCP server authenticates the original caller — zero trust preserved across the agent hop. The server writes a per-tool audit line.</p>
+        <details><summary><span class="kind audit">AUDIT</span> mcp-server TOOL_AUDIT — actual log line</summary><pre>tool_audit timestamp=2026-08-15T04:44:08.963909764Z tool=getTransactions actorId=ZHJ1GOVzB0b4iJTAWdfKJw2IYPa5k6OC@clients subject=ZHJ1GOVzB0b4iJTAWdfKJw2IYPa5k6OC@clients customerExternalId= role=ADMIN cid= confirmationPresent=false otpVerified=false outcome=SUCCESS requestSummary=&quot;accountId=7e4c5d9a-d9ae-4d4f-b6e0-4c472d6f1519,startDate=null,endDate=null,type=null,limit=20,offset=0&quot; resultSummary=&quot;accountId=7e4c5d9a-d9ae-4d4f-b6e0-4c472d6f1519,count=1&quot; errorMessage=&quot;&quot;</pre></details>
+      </div>
+    </li>
+    <li class="step">
+      <div class="marker">4</div>
+      <div class="body">
+        <h3>Tool fans out to the core banking API</h3>
+        <p class="actor">mcp-server → account-service :8084</p>
+        <p>The tool calls the same REST API a human client would, with the same token, and the response flows back through the chain into a grounded answer.</p>
+        <details><summary><span class="kind http">HTTP</span> final agent response — verbatim</summary><pre>{
+  &quot;answer&quot;: &quot;I retrieved 1 transaction(s).&quot;,
+  &quot;explicitConfirmationDetected&quot;: false,
+  &quot;route&quot;: &quot;TOOL&quot;,
+  &quot;toolName&quot;: &quot;getTransactions&quot;,
+  &quot;toolArguments&quot;: {
+    &quot;limit&quot;: 20,
+    &quot;accountId&quot;: &quot;7e4c5d9a-d9ae-4d4f-b6e0-4c472d6f1519&quot;,
+    &quot;actorId&quot;: &quot;ZHJ1GOVzB0b4iJTAWdfKJw2IYPa5k6OC@clients&quot;,
+    &quot;offset&quot;: 0
+  },
+  &quot;toolResult&quot;: {
+    &quot;status&quot;: &quot;SUCCESS&quot;,
+    &quot;message&quot;: &quot;I retrieved your transactions.&quot;,
+    &quot;actionType&quot;: &quot;READ_TRANSACTIONS&quot;,
+    &quot;requiresConfirmation&quot;: false,
+    &quot;confirmationToken&quot;: null,
+    &quot;missingFields&quot;: [],
+    &quot;data&quot;: {
+      &quot;result&quot;: {
+        &quot;accountId&quot;: &quot;7e4c5d9a-d9ae-4d4f-b6e0-4c472d6f1519&quot;,
+        &quot;count&quot;: 1,
+        &quot;limit&quot;: 20,
+        &quot;offset&quot;: 0,
+        &quot;transactions&quot;: [
+          {
+            &quot;transactionId&quot;: &quot;7233ed05-da0e-4dca-9d36-8d501db1c321&quot;,
+            &quot;status&quot;: &quot;POSTED&quot;,
+            &quot;amount&quot;: 250.0,
+            &quot;reason&quot;: &quot;demo top-up&quot;,
+            &quot;balanceAfter&quot;: 350.0,
+            &quot;message&quot;: &quot;Transaction retrieved successfully.&quot;
+          }
+        ],
+        &quot;message&quot;: &quot;Transactions retrieved successfully.&quot;
+      }
+    }
+  },
+  &quot;workflowExecuted&quot;: false,
+  &quot;workflowType&quot;: null,
+  &quot;workflowPlanSummary&quot;: null,
+  &quot;workflowStepsExecuted&quot;: 0,
+  &quot;workflowFallbackUsed&quot;: false
+}</pre></details>
+      </div>
+    </li></ol>
+  </section>
+  
+<section>
+  <h2>The same chain, refusing correctly</h2>
+  <p>Before the machine client was granted the admin tool role, the identical question produced this
+  instead: the JWT authenticated fine, the tool executed — and refused, because a client-credentials
+  token carries no <code>customer_id</code> claim, and customer-role tools will not return account data
+  without knowing whose data it is. Denials are audited with the same fidelity as successes.</p>
+  <details><summary><span class="kind audit">AUDIT</span> mcp-server TOOL_AUDIT — actual refusal</summary><pre>tool_audit timestamp=2026-08-15T04:39:47.523354043Z tool=getTransactions actorId=ZHJ1GOVzB0b4iJTAWdfKJw2IYPa5k6OC@clients subject=ZHJ1GOVzB0b4iJTAWdfKJw2IYPa5k6OC@clients customerExternalId= role=CUSTOMER cid= confirmationPresent=false otpVerified=false outcome=FAILURE requestSummary=&quot;accountId=7e4c5d9a-d9ae-4d4f-b6e0-4c472d6f1519,startDate=null,endDate=null,type=null,limit=20,offset=0&quot; resultSummary=&quot;&quot; errorMessage=&quot;Authenticated customer token does not contain a customer external id.&quot;</pre></details>
+  <details><summary><span class="kind http">HTTP</span> agent response for the refused call — verbatim</summary><pre>{
+  &quot;answer&quot;: &quot;I\u2019m unable to retrieve your transactions right now. Please try again later.&quot;,
+  &quot;toolResult&quot;: {
+    &quot;status&quot;: &quot;FAILED&quot;,
+    &quot;data&quot;: {
+      &quot;error&quot;: &quot;Error calling tool: [TextContent[annotations=null, text=Authenticated customer token does not contain a customer external id., meta=null]]&quot;
+    }
+  }
+}</pre></details>
+</section>
+  <p class="back"><a href="index.html">← Back to the API reference</a></p>
+</main>
+</body>
+</html>

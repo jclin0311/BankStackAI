@@ -8,6 +8,10 @@ Spring AI + Ollama.
 📖 **[Browse the API reference](https://jclin0311.github.io/BankStackAI/)** — every service's
 OpenAPI spec, no setup required.
 
+🔬 **[Runtime walkthrough](https://jclin0311.github.io/BankStackAI/demo.html)** — a real bill
+payment and a real AI-agent request traced hop by hop through the running cluster, with the
+actual HTTP payloads, Kafka messages, database rows and audit lines at every step.
+
 ## Architecture
 
 ```mermaid
