@@ -1,7 +1,7 @@
 CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE IF NOT EXISTS vector_store (
-    id TEXT PRIMARY KEY,
+    id TEXT,
     content TEXT,
     metadata JSONB,
     embedding public.vector NULL,

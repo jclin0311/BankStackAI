@@ -10,6 +10,9 @@ bankstack:
       admin-authorities: ROLE_ADMIN,SCOPE_rag:admin,SCOPE_admin:users.write
 
 spring:
+  application:
+    name: rag-service
+
   security:
     oauth2:
       resourceserver:

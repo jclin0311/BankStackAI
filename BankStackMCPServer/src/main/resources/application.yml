@@ -70,6 +70,11 @@ downstream:
     
     
     
+# Required by commons-security (DefaultSecurityConfig / FeignTokenRelayConfig);
+# same default as the other services.
+auth0:
+  audience: ${AUTH0_AUDIENCE:https://mockbank/api}
+
 management:
   endpoints:
     web:

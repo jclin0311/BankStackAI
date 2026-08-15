@@ -1,0 +1,89 @@
+# Single Postgres (pgvector image: ai_vector_db needs the vector extension).
+# postgres-init ConfigMap mirrors postgres-init.sql at the repo root and runs
+# once on first startup of an empty volume, creating one database per service.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: bankstack
+data:
+  init.sql: |
+    CREATE DATABASE accountsdb;        -- AccountService
+    CREATE DATABASE customerdb;        -- CusomerService
+    CREATE DATABASE billerdb;          -- BillerService
+    CREATE DATABASE billpayworkerdb;   -- BillPayWorkerService
+    CREATE DATABASE paymentdb;         -- PaymentOrchestrator
+    CREATE DATABASE settlementdb;      -- SettlementService
+    CREATE DATABASE ai_vector_db;      -- BankStackRag embeddings + agent action memory
+
+    \connect ai_vector_db
+    CREATE EXTENSION IF NOT EXISTS vector;
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  namespace: bankstack
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: bankstack
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # single PVC, never run two postgres pods at once
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: pgvector/pgvector:pg16
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              value: postgres # local demo cluster only
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: postgres-data
+        - name: init
+          configMap:
+            name: postgres-init
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: bankstack
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432

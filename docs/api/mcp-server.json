@@ -1,0 +1,96 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "bankstack-mcp-server",
+    "description": "BankStackAI \u2014 bankstack-mcp-server",
+    "version": "v1"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8095",
+      "description": "Local \u2014 kubectl -n bankstack port-forward svc/mcp-server 8095:8095"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/v1/mcp/invoke": {
+      "post": {
+        "tags": [
+          "tool-test-controller"
+        ],
+        "operationId": "invoke",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToolInvokeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/tools": {
+      "get": {
+        "tags": [
+          "tool-test-controller"
+        ],
+        "operationId": "listTools",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ToolInvokeRequest": {
+        "type": "object",
+        "properties": {
+          "tool": {
+            "type": "string"
+          },
+          "input": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "description": "Auth0 access token. Paste the raw JWT \u2014 Swagger adds the \"Bearer \" prefix.",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

@@ -1,10 +1,13 @@
 spring:
+  application:
+    name: customer-service
+
   security:
     oauth2:
       resourceserver:
         jwt:
           issuer-uri: ${AUTH0_ISSUER_URI:https://dev-4mxqf6pdu0czpsbp.us.auth0.com/}
-  
+
   datasource:
     url: jdbc:postgresql://localhost:5432/customerdb
     username: postgres
@@ -17,9 +20,6 @@ spring:
         format_sql: true
     hibernate:
       ddl-auto: update
-      
-application:
-  name: customer-service
 
 server:
   port: 8083

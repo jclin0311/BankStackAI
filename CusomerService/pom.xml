@@ -33,6 +33,13 @@
     </dependencyManagement>
 
     <dependencies>
+		<!-- Swagger UI at /swagger-ui.html (spec at /v3/api-docs) -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>2.6.0</version>
+		</dependency>
+
 		
 		<dependency>
   <groupId>com.commons</groupId>
@@ -136,6 +143,14 @@
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct-processor</artifactId>
             <version>1.5.5.Final</version>
+          </path>
+          <!-- Makes Lombok run before MapStruct so generated mappers can see
+               Lombok-generated builders/getters; without it the processor order
+               is nondeterministic and the mapper impl intermittently miscompiles. -->
+          <path>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok-mapstruct-binding</artifactId>
+            <version>0.2.0</version>
           </path>
         </annotationProcessorPaths>
       </configuration>

@@ -17,6 +17,8 @@ public class PermissionFilterService {
 	// Filters search results based on sensitivity and allowed scopes defined in metadata.
 	// Ensures only authorized results are returned according to the user's access context.
 	// Supports PUBLIC, INTERNAL, and ADMIN access levels with scope-based checks.
+	// Unrecognized sensitivity values are denied: a typo in ingestion metadata must not
+	// widen access.
 
     public List<HybridSearchResult> filter(List<HybridSearchResult> input, AccessContext accessContext) {
         return input.stream()
@@ -44,20 +46,25 @@ public class PermissionFilterService {
         }
 
         
-        boolean allowed = 
+        boolean allowed =
          switch (sensitivity.toUpperCase()) {
             case "PUBLIC" -> true;
             case "INTERNAL" ->  hasAtLeastOneAllowedScope(accessContext.grantedScopes(), allowedScopes);
-           
-            default -> true;
+            // Only the admin short-circuit above reaches ADMIN chunks.
+            case "ADMIN" -> false;
+            default -> false;
         };
-        
+
         return allowed;
     }
 
     private boolean hasAtLeastOneAllowedScope(Set<String> grantedScopes, Set<String> allowedScopes) {
+        // An INTERNAL chunk that names no scopes grants access to nobody but admins,
+        // who already returned above. Treating "no scopes listed" as "everyone" would
+        // expose internal content to any authenticated caller, customers included,
+        // since allowedScopes is optional at ingest.
         if (allowedScopes == null || allowedScopes.isEmpty()) {
-            return true;
+            return false;
         }
         if (grantedScopes == null || grantedScopes.isEmpty()) {
             return false;

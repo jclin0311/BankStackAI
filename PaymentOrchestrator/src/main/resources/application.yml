@@ -12,8 +12,11 @@ spring:
           account-m2m:
             provider: auth0
             authorization-grant-type: client_credentials
-            client-id: COElk9GHOmWS9L4MAQvscuxA49Cl4mfI
-            client-secret: XXXXXXXXXX
+            # Auth0 machine-to-machine credentials used to call AccountService.
+            # Supplied by the environment: .env locally (via direnv), the
+            # bankstack-auth0 secret in Kubernetes. Startup fails if unset.
+            client-id: ${AUTH0_M2M_CLIENT_ID}
+            client-secret: ${AUTH0_M2M_CLIENT_SECRET}
             scope: admin:accounts
 
         provider:

@@ -72,7 +72,10 @@ public class DefaultSecurityConfig {
                     "/api/v1/customer/register", // Public endpoint to register new customers
                     "/.well-known/jwks.json", // JWKS public key endpoint (used by Auth0)
                     "/api/v1/test/public",
-                    "/api/v1/customers"
+                    "/api/v1/customers",
+                    "/swagger-ui.html",       // Swagger UI (springdoc)
+                    "/swagger-ui/**",
+                    "/v3/api-docs/**"
                 ).permitAll()
 
                 // Everything else requires a valid JWT access token

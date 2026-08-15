@@ -1,0 +1,58 @@
+# Generated for module BillerService
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: biller-service
+  namespace: bankstack
+  labels:
+    app: biller-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: biller-service
+  template:
+    metadata:
+      labels:
+        app: biller-service
+    spec:
+      containers:
+        - name: biller-service
+          image: bankstack/biller-service:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8088
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://postgres:5432/billerdb"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "postgres"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "postgres"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 768Mi
+          readinessProbe:
+            tcpSocket:
+              port: 8088
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8088
+            initialDelaySeconds: 90
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: biller-service
+  namespace: bankstack
+spec:
+  selector:
+    app: biller-service
+  ports:
+    - port: 8088

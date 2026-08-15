@@ -1,4 +1,7 @@
 spring:
+  application:
+    name: customer-service
+
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
     producer:
@@ -26,9 +29,6 @@ spring:
       resourceserver:
         jwt:
           jwk-set-uri: ${JWK_SET_URI}
-
-application:
-  name: customer-service
 
 server:
   port: ${SERVER_PORT:8083}

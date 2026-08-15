@@ -19,6 +19,9 @@
     <properties>
         <java.version>17</java.version>
         <spring-ai.version>1.1.4</spring-ai.version>
+        <!-- commons libraries pull in the 2023.0.x Spring Cloud train, which refuses
+             to start on Boot 3.5. Pin the compatible train, same as BankStackMCPServer. -->
+        <spring-cloud.version>2025.0.2</spring-cloud.version>
     </properties>
 
     <dependencyManagement>
@@ -30,10 +33,24 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
     <dependencies>
+		<!-- Swagger UI at /swagger-ui.html (spec at /v3/api-docs) -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>2.8.13</version>
+		</dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>

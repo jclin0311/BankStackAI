@@ -1,1 +1,2 @@
 com.commons.security.autoconfigure.CommonsSecurityAutoConfiguration
+com.commons.security.autoconfigure.CommonsOpenApiAutoConfiguration

@@ -1,14 +1,15 @@
-# Use OpenJDK as the base image
-FROM eclipse-temurin:17-jdk-jammy
+# Runtime-only image: the jar is built by Maven outside Docker
+# (locally via build-all.sh, in CI by the workflow) and copied in.
+FROM eclipse-temurin:17-jre-jammy
 
-# Set the working directory inside the container
 WORKDIR /app
 
-# Copy the Maven build JAR into the container
+# Run as non-root
+RUN useradd --system --uid 1001 appuser
+USER appuser
+
 COPY target/*.jar app.jar
 
-# Expose the port (change if needed)
 EXPOSE 8080
 
-# Run the JAR
 ENTRYPOINT ["java", "-jar", "app.jar"]

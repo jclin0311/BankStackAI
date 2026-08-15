@@ -20,11 +20,6 @@ logging:
 
     
     
-consent:
-  service:
-    url: http://localhost:8096/api/v1
-    
-    
 auth0:
   domain: ${AUTH0_DOMAIN:https://dev-4mxqf6pdu0czpsbp.us.auth0.com}
   audience: ${AUTH0_AUDIENCE:https://mockbank/api}

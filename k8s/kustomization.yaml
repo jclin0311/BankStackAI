@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: bankstack
+
+resources:
+  - namespace.yaml
+  - infra/postgres.yaml
+  - infra/kafka.yaml
+  - services/auth-user.yaml
+  - services/customer-service.yaml
+  - services/account-service.yaml
+  - services/biller-service.yaml
+  - services/payment-orchestrator.yaml
+  - services/billpay-worker.yaml
+  - services/settlement-service.yaml
+  - services/mcp-server.yaml
+  - services/rag-service.yaml
+  - services/multi-agent.yaml
+
+# CI overrides these to the GHCR images it just pushed
+# (kustomize edit set image bankstack/<name>=ghcr.io/...:<tag>).
+images: []

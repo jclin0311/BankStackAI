@@ -1,0 +1,332 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "bankstack-agent",
+    "description": "BankStackAI \u2014 bankstack-agent",
+    "version": "v1"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8096",
+      "description": "Local \u2014 kubectl -n bankstack port-forward svc/multi-agent 8096:8096"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/v1/agent/multi-agent-chat": {
+      "post": {
+        "tags": [
+          "multi-agent-routing-controller"
+        ],
+        "operationId": "multiAgentChat",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GatewayChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiAgentExecutionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agent/chat": {
+      "post": {
+        "tags": [
+          "agent-gateway-controller"
+        ],
+        "operationId": "chat",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GatewayChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/GatewayChatResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "GatewayChatRequest": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "AgentExecutionResult": {
+        "type": "object",
+        "properties": {
+          "agentType": {
+            "type": "string",
+            "enum": [
+              "ACCOUNT",
+              "PAYMENT",
+              "SUPPORT",
+              "RISK"
+            ]
+          },
+          "agentName": {
+            "type": "string"
+          },
+          "taskId": {
+            "type": "string"
+          },
+          "intent": {
+            "type": "string"
+          },
+          "selectedTool": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "SUCCESS",
+              "NEEDS_INPUT",
+              "PREPARED",
+              "EXECUTED",
+              "SKIPPED",
+              "BLOCKED",
+              "FAILED"
+            ]
+          },
+          "answer": {
+            "type": "string"
+          },
+          "missingFields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "confirmationRequired": {
+            "type": "boolean"
+          },
+          "confirmationToken": {
+            "type": "string"
+          },
+          "arguments": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "toolResult": {
+            "$ref": "#/components/schemas/ToolExecutionResult"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "MultiAgentExecutionResponse": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "multiDomain": {
+            "type": "boolean"
+          },
+          "tasksPlanned": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "tasksExecuted": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "confirmationRequired": {
+            "type": "boolean"
+          },
+          "routingPlan": {
+            "$ref": "#/components/schemas/RoutingPlan"
+          },
+          "agentResults": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentExecutionResult"
+            }
+          }
+        }
+      },
+      "RoutedTask": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string"
+          },
+          "agentType": {
+            "type": "string",
+            "enum": [
+              "ACCOUNT",
+              "PAYMENT",
+              "SUPPORT",
+              "RISK"
+            ]
+          },
+          "intent": {
+            "type": "string"
+          },
+          "originalUserMessage": {
+            "type": "string"
+          },
+          "toolCandidate": {
+            "type": "boolean"
+          },
+          "suggestedToolName": {
+            "type": "string"
+          },
+          "executionAllowedByRouter": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "RoutingPlan": {
+        "type": "object",
+        "properties": {
+          "multiDomain": {
+            "type": "boolean"
+          },
+          "taskCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoutedTask"
+            }
+          }
+        }
+      },
+      "ToolExecutionResult": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "actionType": {
+            "type": "string"
+          },
+          "requiresConfirmation": {
+            "type": "boolean"
+          },
+          "confirmationToken": {
+            "type": "string"
+          },
+          "missingFields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        }
+      },
+      "GatewayChatResponse": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string"
+          },
+          "explicitConfirmationDetected": {
+            "type": "boolean"
+          },
+          "route": {
+            "type": "string"
+          },
+          "toolName": {
+            "type": "string"
+          },
+          "toolArguments": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "toolResult": {
+            "$ref": "#/components/schemas/ToolExecutionResult"
+          },
+          "workflowExecuted": {
+            "type": "boolean"
+          },
+          "workflowType": {
+            "type": "string"
+          },
+          "workflowPlanSummary": {
+            "type": "string"
+          },
+          "workflowStepsExecuted": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "workflowFallbackUsed": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "description": "Auth0 access token. Paste the raw JWT \u2014 Swagger adds the \"Bearer \" prefix.",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

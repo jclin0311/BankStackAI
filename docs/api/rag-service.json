@@ -1,0 +1,215 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "rag-service",
+    "description": "BankStackAI \u2014 rag-service",
+    "version": "v1"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8098",
+      "description": "Local \u2014 kubectl -n bankstack port-forward svc/rag-service 8098:8098"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/rag/ingest": {
+      "post": {
+        "tags": [
+          "rag-ingest-controller"
+        ],
+        "operationId": "ingest",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RagIngestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RagIngestResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/rag/ask": {
+      "post": {
+        "tags": [
+          "rag-controller"
+        ],
+        "operationId": "ask",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RagAskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RagAskResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RagIngestRequest": {
+        "type": "object",
+        "properties": {
+          "docId": {
+            "type": "string"
+          },
+          "docType": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "effectiveTo": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "text": {
+            "type": "string"
+          },
+          "policyTags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "allowedScopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sensitivity": {
+            "type": "string",
+            "enum": [
+              "PUBLIC",
+              "INTERNAL",
+              "ADMIN"
+            ]
+          }
+        }
+      },
+      "RagIngestResponse": {
+        "type": "object",
+        "properties": {
+          "docId": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "chunkCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "RagAskRequest": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "conversationId": {
+            "type": "string"
+          }
+        }
+      },
+      "CitationCheckResult": {
+        "type": "object",
+        "properties": {
+          "referenceNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "valid": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "RagAskResponse": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string"
+          },
+          "taskType": {
+            "type": "string",
+            "enum": [
+              "POLICY_LOOKUP",
+              "REFUSAL"
+            ]
+          },
+          "fullyVerified": {
+            "type": "boolean"
+          },
+          "citationChecks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CitationCheckResult"
+            }
+          },
+          "renderedContext": {
+            "type": "string"
+          },
+          "effectiveConversationId": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "description": "Auth0 access token. Paste the raw JWT \u2014 Swagger adds the \"Bearer \" prefix.",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

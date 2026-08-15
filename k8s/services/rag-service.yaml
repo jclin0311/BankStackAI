@@ -1,0 +1,60 @@
+# Generated for module BankStackRag
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-service
+  namespace: bankstack
+  labels:
+    app: rag-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rag-service
+  template:
+    metadata:
+      labels:
+        app: rag-service
+    spec:
+      containers:
+        - name: rag-service
+          image: bankstack/rag-service:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8098
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://postgres:5432/ai_vector_db"
+            - name: SPRING_AI_OLLAMA_BASEURL
+              value: "http://host.docker.internal:11434"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "postgres"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "postgres"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 768Mi
+          readinessProbe:
+            tcpSocket:
+              port: 8098
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8098
+            initialDelaySeconds: 90
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rag-service
+  namespace: bankstack
+spec:
+  selector:
+    app: rag-service
+  ports:
+    - port: 8098

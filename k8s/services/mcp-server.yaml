@@ -1,0 +1,62 @@
+# Generated for module BankStackMCPServer
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-server
+  namespace: bankstack
+  labels:
+    app: mcp-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-server
+  template:
+    metadata:
+      labels:
+        app: mcp-server
+    spec:
+      containers:
+        - name: mcp-server
+          image: bankstack/mcp-server:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8095
+          env:
+            - name: DOWNSTREAM_SERVICES_ACCOUNT_BASEURL
+              value: "http://account-service:8084"
+            - name: DOWNSTREAM_SERVICES_CUSTOMER_BASEURL
+              value: "http://customer-service:8083"
+            - name: DOWNSTREAM_SERVICES_PAYMENT_BASEURL
+              value: "http://payment-orchestrator:8086"
+            - name: DOWNSTREAM_SERVICES_TRANSACTION_BASEURL
+              value: "http://account-service:8084"
+            - name: DOWNSTREAM_SERVICES_RAG_BASEURL
+              value: "http://rag-service:8098"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 768Mi
+          readinessProbe:
+            tcpSocket:
+              port: 8095
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8095
+            initialDelaySeconds: 90
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-server
+  namespace: bankstack
+spec:
+  selector:
+    app: mcp-server
+  ports:
+    - port: 8095

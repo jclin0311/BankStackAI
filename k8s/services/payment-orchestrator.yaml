@@ -1,0 +1,70 @@
+# Generated for module PaymentOrchestrator
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-orchestrator
+  namespace: bankstack
+  labels:
+    app: payment-orchestrator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-orchestrator
+  template:
+    metadata:
+      labels:
+        app: payment-orchestrator
+    spec:
+      containers:
+        - name: payment-orchestrator
+          image: bankstack/payment-orchestrator:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8086
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://postgres:5432/paymentdb"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka:9092"
+            - name: ACCOUNT_SERVICE_URL
+              value: "http://account-service:8084"
+            - name: BILLER_SERVICE_URL
+              value: "http://biller-service:8088"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "postgres"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "postgres"
+          envFrom:
+            # AUTH0_M2M_CLIENT_ID / _SECRET for the account-m2m client_credentials
+            # registration; create with k8s/create-auth0-secret.sh
+            - secretRef:
+                name: bankstack-auth0
+                optional: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 768Mi
+          readinessProbe:
+            tcpSocket:
+              port: 8086
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8086
+            initialDelaySeconds: 90
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-orchestrator
+  namespace: bankstack
+spec:
+  selector:
+    app: payment-orchestrator
+  ports:
+    - port: 8086

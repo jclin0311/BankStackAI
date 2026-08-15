@@ -1,0 +1,164 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "payment-orchestrator",
+    "description": "BankStackAI \u2014 payment-orchestrator",
+    "version": "v1"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8086",
+      "description": "Local \u2014 kubectl -n bankstack port-forward svc/payment-orchestrator 8086:8086"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/v1/payments/billpay": {
+      "post": {
+        "tags": [
+          "payment-controller"
+        ],
+        "operationId": "billPay",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillPayRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentAcceptedResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/{paymentId}": {
+      "get": {
+        "tags": [
+          "payment-controller"
+        ],
+        "operationId": "get",
+        "parameters": [
+          {
+            "name": "paymentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AmountDTO": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "value": {
+            "type": "number"
+          }
+        }
+      },
+      "BillPayRequest": {
+        "type": "object",
+        "properties": {
+          "debtorAccountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "billerReferenceNumber": {
+            "type": "string",
+            "minLength": 1
+          },
+          "invoiceReference": {
+            "type": "string",
+            "minLength": 1
+          },
+          "executionDate": {
+            "type": "string",
+            "minLength": 1
+          },
+          "amount": {
+            "$ref": "#/components/schemas/AmountDTO"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount",
+          "billerReferenceNumber",
+          "debtorAccountId",
+          "executionDate",
+          "invoiceReference"
+        ]
+      },
+      "PaymentAcceptedResponse": {
+        "type": "object",
+        "properties": {
+          "paymentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string"
+          },
+          "statusUrl": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "description": "Auth0 access token. Paste the raw JWT \u2014 Swagger adds the \"Bearer \" prefix.",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

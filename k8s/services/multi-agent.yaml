@@ -1,0 +1,64 @@
+# Generated for module BankStackMultiAgent
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multi-agent
+  namespace: bankstack
+  labels:
+    app: multi-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: multi-agent
+  template:
+    metadata:
+      labels:
+        app: multi-agent
+    spec:
+      containers:
+        - name: multi-agent
+          image: bankstack/multi-agent:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8096
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://postgres:5432/ai_vector_db"
+            - name: SPRING_AI_OLLAMA_BASEURL
+              value: "http://host.docker.internal:11434"
+            - name: BANKSTACK_MCP_SERVER_BASEURL
+              value: "http://mcp-server:8095"
+            - name: SPRING_AI_MCP_CLIENT_STREAMABLEHTTP_CONNECTIONS_BANKSTACKSERVER_URL
+              value: "http://mcp-server:8095"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "postgres"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "postgres"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 768Mi
+          readinessProbe:
+            tcpSocket:
+              port: 8096
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8096
+            initialDelaySeconds: 90
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: multi-agent
+  namespace: bankstack
+spec:
+  selector:
+    app: multi-agent
+  ports:
+    - port: 8096

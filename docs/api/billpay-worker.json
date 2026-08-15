@@ -1,0 +1,62 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "billpay-worker-service",
+    "description": "BankStackAI \u2014 billpay-worker-service",
+    "version": "v1"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8090",
+      "description": "Local \u2014 kubectl -n bankstack port-forward svc/billpay-worker 8090:8090"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/mock/central1/pain002/{batchId}": {
+      "post": {
+        "tags": [
+          "central-1-mock-controller"
+        ],
+        "operationId": "simulatePain002",
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "description": "Auth0 access token. Paste the raw JWT \u2014 Swagger adds the \"Bearer \" prefix.",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

@@ -1,0 +1,56 @@
+# Generated for module AuthUser
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-user
+  namespace: bankstack
+  labels:
+    app: auth-user
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-user
+  template:
+    metadata:
+      labels:
+        app: auth-user
+    spec:
+      containers:
+        - name: auth-user
+          image: bankstack/auth-user:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8094
+          envFrom:
+            # Auth0 credentials; create with k8s/create-auth0-secret.sh
+            - secretRef:
+                name: bankstack-auth0
+                optional: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 768Mi
+          readinessProbe:
+            tcpSocket:
+              port: 8094
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8094
+            initialDelaySeconds: 90
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-user
+  namespace: bankstack
+spec:
+  selector:
+    app: auth-user
+  ports:
+    - port: 8094
