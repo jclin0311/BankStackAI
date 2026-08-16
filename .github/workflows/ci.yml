@@ -12,9 +12,115 @@ env:
   IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/bankstack
 
 jobs:
-  build-test:
-    name: Build & test
+  # Works out which services a push actually affects. A service is affected by its own
+  # directory and by the commons libraries it consumes — those are versioned jars, so a
+  # change there silently alters every dependent and must rebuild them.
+  changes:
+    name: Detect affected services
     runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.select.outputs.services }}
+      shared: ${{ steps.filter.outputs.shared }}
+      docs: ${{ steps.filter.outputs.docs }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            auth-user:
+              - 'AuthUser/**'
+              - 'commons-dto/**'
+              - 'commons-security/**'
+              - 'commons-observability/**'
+            customer-service:
+              - 'CusomerService/**'
+              - 'commons-dto/**'
+              - 'commons-security/**'
+              - 'commons-observability/**'
+            account-service:
+              - 'AccountService/**'
+              - 'commons-dto/**'
+              - 'commons-security/**'
+              - 'commons-observability/**'
+            biller-service:
+              - 'BillerService/**'
+              - 'commons-dto/**'
+              - 'commons-security/**'
+              - 'commons-observability/**'
+            payment-orchestrator:
+              - 'PaymentOrchestrator/**'
+              - 'commons-dto/**'
+              - 'commons-security/**'
+              - 'commons-observability/**'
+            billpay-worker:
+              - 'BillPayWorkerService/**'
+              - 'commons-dto/**'
+              - 'commons-security/**'
+              - 'commons-observability/**'
+            settlement-service:
+              - 'SettlementService/**'
+              - 'commons-dto/**'
+            mcp-server:
+              - 'BankStackMCPServer/**'
+              - 'commons-dto/**'
+              - 'commons-security/**'
+            rag-service:
+              - 'BankStackRag/**'
+              - 'commons-security/**'
+            multi-agent:
+              - 'BankStackMultiAgent/**'
+              - 'commons-dto/**'
+              - 'commons-security/**'
+            shared:
+              - 'commons-dto/**'
+              - 'commons-security/**'
+              - 'commons-observability/**'
+              - 'BankStackEval/**'
+            docs:
+              - 'docs/**'
+
+      # `changes` also carries the non-service filters; drop them so the matrix is
+      # exactly the set of deployable services.
+      - name: Select service matrix
+        id: select
+        run: |
+          services=$(jq -c 'map(select(. != "docs" and . != "shared"))' <<<'${{ steps.filter.outputs.changes }}')
+          echo "services=$services" >> "$GITHUB_OUTPUT"
+          echo "Affected services: $services"
+
+  # Shared libraries have their own tests; a service build would not exercise them.
+  shared-libs:
+    name: Test shared libraries
+    needs: changes
+    if: needs.changes.outputs.shared == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - name: Build and test commons + eval harness
+        run: |
+          set -euo pipefail
+          for m in commons-dto commons-security commons-observability BankStackEval; do
+            echo "::group::$m"
+            (cd "$m" && mvn -B install)
+            echo "::endgroup::"
+          done
+
+  build-test:
+    name: Build & test ${{ matrix.service }}
+    needs: changes
+    if: needs.changes.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.changes.outputs.services) }}
     services:
       # Context-load tests for the JPA services need a reachable Postgres.
       postgres:
@@ -38,24 +144,24 @@ jobs:
           java-version: "17"
           cache: maven
 
+      - name: Resolve module directory
+        id: mod
+        run: echo "dir=$(jq -r --arg s '${{ matrix.service }}' '.[$s]' .github/service-modules.json)" >> "$GITHUB_OUTPUT"
+
       - name: Create per-service databases
         run: PGPASSWORD=postgres psql -h localhost -U postgres -f postgres-init.sql
 
-      - name: Build all modules (shared libs first)
-        run: ./build-all.sh
-
-      - name: Run tests for every module
+      # The commons jars are consumed from the local repository, so they have to be
+      # installed before any single service can compile.
+      - name: Install shared libraries
         run: |
           set -euo pipefail
-          for m in commons-dto commons-security commons-observability \
-                   CusomerService AccountService PaymentOrchestrator \
-                   BillerService BillPayWorkerService SettlementService \
-                   AuthUser BankStackMCPServer BankStackRag \
-                   BankStackMultiAgent BankStackEval; do
-            echo "::group::mvn test $m"
-            (cd "$m" && mvn test -B)
-            echo "::endgroup::"
+          for m in commons-dto commons-security commons-observability; do
+            (cd "$m" && mvn -B -q install -DskipTests)
           done
+
+      - name: Build and test ${{ matrix.service }}
+        run: cd "${{ steps.mod.outputs.dir }}" && mvn -B package
         env:
           # Dummy Auth0 credentials so the AuthUser / PaymentOrchestrator context
           # tests can start without real secrets.
@@ -64,30 +170,37 @@ jobs:
           AUTH0_M2M_CLIENT_ID: ci-dummy
           AUTH0_M2M_CLIENT_SECRET: ci-dummy
 
-      - name: Upload service jars
+      - name: Upload jar
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: actions/upload-artifact@v5
         with:
-          name: service-jars
+          name: jar-${{ matrix.service }}
           retention-days: 1
-          path: |
-            */target/*.jar
-            !*/target/*sources*.jar
+          path: ${{ steps.mod.outputs.dir }}/target/*.jar
 
   images:
-    name: Build & push images
-    needs: build-test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    name: Publish ${{ matrix.service }} image
+    needs: [changes, build-test]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.changes.outputs.services != '[]'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.changes.outputs.services) }}
     steps:
       - uses: actions/checkout@v5
 
+      - name: Resolve module directory
+        id: mod
+        run: echo "dir=$(jq -r --arg s '${{ matrix.service }}' '.[$s]' .github/service-modules.json)" >> "$GITHUB_OUTPUT"
+
       - uses: actions/download-artifact@v5
         with:
-          name: service-jars
+          name: jar-${{ matrix.service }}
+          path: ${{ steps.mod.outputs.dir }}/target
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -96,32 +209,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push service images
+      # Only affected services get a new tag, so each service's `latest` advances
+      # independently of the rest of the system.
+      - name: Build and push
         run: |
           set -euo pipefail
-          declare -A services=(
-            [AuthUser]=auth-user
-            [CusomerService]=customer-service
-            [AccountService]=account-service
-            [BillerService]=biller-service
-            [PaymentOrchestrator]=payment-orchestrator
-            [BillPayWorkerService]=billpay-worker
-            [SettlementService]=settlement-service
-            [BankStackMCPServer]=mcp-server
-            [BankStackRag]=rag-service
-            [BankStackMultiAgent]=multi-agent
-          )
-          for module in "${!services[@]}"; do
-            image="${IMAGE_PREFIX}/${services[$module]}"
-            docker build -t "$image:${GITHUB_SHA::7}" -t "$image:latest" "$module"
-            docker push "$image:${GITHUB_SHA::7}"
-            docker push "$image:latest"
-          done
+          image="${IMAGE_PREFIX}/${{ matrix.service }}"
+          docker build -t "$image:${GITHUB_SHA::7}" -t "$image:latest" "${{ steps.mod.outputs.dir }}"
+          docker push "$image:${GITHUB_SHA::7}"
+          docker push "$image:latest"
 
   pages:
     name: Publish API reference
-    needs: build-test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: changes
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.changes.outputs.docs == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -146,8 +247,8 @@ jobs:
         uses: actions/deploy-pages@v4
 
   deploy:
-    name: Deploy to Kubernetes
-    needs: images
+    name: Deploy affected services
+    needs: [changes, images]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
@@ -172,18 +273,14 @@ jobs:
           printf '%s' "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
           chmod 600 ~/.kube/config
 
-      - name: Point manifests at the freshly pushed images
+      # Roll only the services this push rebuilt; everything else keeps running the
+      # image it was already on.
+      - name: Roll affected deployments
         if: steps.kube.outputs.available == 'true'
         run: |
-          cd k8s
-          for svc in auth-user customer-service account-service biller-service \
-                     payment-orchestrator billpay-worker settlement-service \
-                     mcp-server rag-service multi-agent; do
-            kustomize edit set image "bankstack/${svc}=${IMAGE_PREFIX}/${svc}:${GITHUB_SHA::7}"
+          set -euo pipefail
+          for svc in $(jq -r '.[]' <<<'${{ needs.changes.outputs.services }}'); do
+            kubectl -n bankstack set image "deployment/$svc" \
+              "$svc=${IMAGE_PREFIX}/$svc:${GITHUB_SHA::7}"
+            kubectl -n bankstack rollout status "deployment/$svc" --timeout=300s
           done
-
-      - name: Apply manifests
-        if: steps.kube.outputs.available == 'true'
-        run: |
-          kubectl apply -k k8s/
-          kubectl -n bankstack rollout status deployment --timeout=300s

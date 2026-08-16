@@ -1,0 +1,12 @@
+{
+  "auth-user": "AuthUser",
+  "customer-service": "CusomerService",
+  "account-service": "AccountService",
+  "biller-service": "BillerService",
+  "payment-orchestrator": "PaymentOrchestrator",
+  "billpay-worker": "BillPayWorkerService",
+  "settlement-service": "SettlementService",
+  "mcp-server": "BankStackMCPServer",
+  "rag-service": "BankStackRag",
+  "multi-agent": "BankStackMultiAgent"
+}
