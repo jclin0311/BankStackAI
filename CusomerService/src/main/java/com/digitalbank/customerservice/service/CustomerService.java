@@ -21,12 +21,19 @@ import com.digitalbank.customerservice.model.Customer;
 import com.digitalbank.customerservice.model.KycStatus;
 import com.digitalbank.customerservice.repository.CustomerRepository;
 import com.digitalbank.customerservice.util.Fingerprints;
+import com.digitalbank.customerservice.util.TemporaryPasswords;
 
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 public class CustomerService {
+
+	/**
+	 * KYC onboarding only ever provisions customers. Staff accounts are created out of
+	 * band, so this path must never be able to hand out ROLE_ADMIN.
+	 */
+	private static final String CUSTOMER_ROLE = "ROLE_CUSTOMER";
 
 	private final AuthServiceClient authServiceClient;
 	private final CustomerRepository repository;
@@ -111,8 +118,11 @@ public class CustomerService {
 
 
 		if ("VERIFIED".equalsIgnoreCase(kycStatus)) {
+		    // One-time password: the customer sets their own via a reset link, and no
+		    // two customers share a credential.
 		    CustomerRegistrationRequest request =
-		        new CustomerRegistrationRequest(c.getEmail(), "default-password", c.getExternalId());
+		        new CustomerRegistrationRequest(c.getEmail(), TemporaryPasswords.generate(),
+		                c.getExternalId(), CUSTOMER_ROLE);
 		    authServiceClient.registerCustomer(request);
 		    c.setKycStatus(KycStatus.VERIFIED);
 		    c.setActive(true);

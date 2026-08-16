@@ -46,6 +46,18 @@
       font-size: .95em;
     }
 
+    .picker {
+      display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
+      padding: .85rem clamp(1rem, 4vw, 3rem); background: #fff;
+      border-bottom: 1px solid #e2e8f0; font-size: .88rem;
+    }
+    .picker label { font-weight: 600; color: #334155; }
+    .picker select {
+      font: inherit; padding: .35rem .6rem; border: 1px solid #cbd5e1;
+      border-radius: 6px; background: #f8fafc; color: #0f172a; min-width: 14rem;
+    }
+    #picker-status { color: #b45309; font-size: .82rem; }
+
     /* Swagger UI ships its own topbar with a URL box we do not want */
     .swagger-ui .topbar { display: none; }
     .swagger-ui .information-container { padding-top: 1.5rem; }
@@ -78,6 +90,12 @@
     bearer token — see the README.
   </div>
 
+  <div class="picker">
+    <label for="service">Service</label>
+    <select id="service"></select>
+    <span id="picker-status"></span>
+  </div>
+
   <div id="swagger-ui"></div>
 
   <script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-bundle.js" crossorigin></script>
@@ -94,17 +112,41 @@
       ["rag-service", "api/rag-service.json"],
       ["multi-agent", "api/multi-agent.json"],
     ];
+    const DEFAULT_SERVICE = "account-service";
 
-    window.ui = SwaggerUIBundle({
-      dom_id: "#swagger-ui",
-      urls: SERVICES.map(([name, url]) => ({ name, url })),
-      "urls.primaryName": "account-service",
-      deepLinking: true,
-      docExpansion: "list",
-      defaultModelsExpandDepth: 0,
-      tryItOutEnabled: false,
-      presets: [SwaggerUIBundle.presets.apis],
+    const select = document.getElementById("service");
+    const status = document.getElementById("picker-status");
+
+    SERVICES.forEach(function (s) {
+      const opt = document.createElement("option");
+      opt.value = s[1];
+      opt.textContent = s[0];
+      opt.selected = s[0] === DEFAULT_SERVICE;
+      select.appendChild(opt);
     });
+
+    // One spec at a time via `url`. The multi-spec `urls` option is rendered by the
+    // topbar, which ships in the standalone preset and is hidden here — using it
+    // would leave nothing to load the spec at all.
+    function render(url) {
+      window.ui = SwaggerUIBundle({
+        dom_id: "#swagger-ui",
+        url: url,
+        deepLinking: true,
+        docExpansion: "list",
+        defaultModelsExpandDepth: 0,
+        tryItOutEnabled: false,
+        presets: [SwaggerUIBundle.presets.apis],
+      });
+    }
+
+    // file:// blocks the spec fetch, so say so rather than showing an empty page
+    if (window.location.protocol === "file:") {
+      status.textContent = "⚠ Opened from disk — serve over HTTP to load specs.";
+    }
+
+    select.addEventListener("change", function (e) { render(e.target.value); });
+    render(select.value);
   </script>
 </body>
 </html>

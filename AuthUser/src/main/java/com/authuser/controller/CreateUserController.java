@@ -2,6 +2,7 @@ package com.authuser.controller;
 
 import java.util.Map;
 
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -74,9 +75,9 @@ public class CreateUserController {
      */
     @PreAuthorize("hasAuthority('SCOPE_admin:users.write')")
     @PostMapping("/iam/users")
-    public ResponseEntity<Map> createUser(@RequestBody CreateUserRequest req) {
+    public ResponseEntity<Map> createUser(@Valid @RequestBody CreateUserRequest req) {
         // Delegate to service layer to create the user in Auth0's database connection.
-        Map u = auth0.createDbUser(req.getEmail(), req.getPassword(), req.getCustomerId());
+        Map u = auth0.createDbUser(req.getEmail(), req.getPassword(), req.getCustomerId(), req.getRole());
 
         // Return the Auth0 user object as JSON.
         return ResponseEntity.ok(u);

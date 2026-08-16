@@ -45,3 +45,6 @@ auth0:
     client-id: ${AUTH0_MGMT_CLIENT_ID}
     client-secret: ${AUTH0_MGMT_CLIENT_SECRET}
     audience: ${AUTH0_DOMAIN}/api/v2/
+    roles:
+      ROLE_CUSTOMER: ${AUTH0_ROLE_CUSTOMER_ID}
+      ROLE_ADMIN: ${AUTH0_ROLE_ADMIN_ID}

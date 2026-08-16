@@ -1,6 +1,11 @@
 package com.authuser.service;
 
+import com.authuser.config.Auth0RoleProperties;
+import com.commons.exception.BadRequestException;
+
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.client.RestClientException;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -24,6 +29,7 @@ import java.util.*;
  * </ul>
  */
 @Service
+@Slf4j
 public class Auth0UserService {
 
     /**
@@ -32,6 +38,9 @@ public class Auth0UserService {
      */
     @Value("${auth0.domain}")
     private String domain;
+
+    /** Role name → Auth0 role id, configured per tenant. */
+    private final Auth0RoleProperties roleProperties;
 
     private final ManagementTokenService tokens;
     private final RestTemplate rt = new RestTemplate();
@@ -42,8 +51,9 @@ public class Auth0UserService {
      *
      * @param tokens service that provides the "Bearer" token for Auth0 Management API calls
      */
-    public Auth0UserService(ManagementTokenService tokens) {
+    public Auth0UserService(ManagementTokenService tokens, Auth0RoleProperties roleProperties) {
         this.tokens = tokens;
+        this.roleProperties = roleProperties;
     }
 
     /**
@@ -59,9 +69,10 @@ public class Auth0UserService {
      * @param email       the user's email
      * @param password    the initial password
      * @param customerId  external customer ID (used as username and stored in app_metadata)
+     * @param role        role name to grant, resolved against auth0.mgmt.roles
      * @return a {@link Map} containing Auth0's created user object (user_id, email, etc.)
      */
-    public Map createDbUser(String email, String password, String customerId) {
+    public Map createDbUser(String email, String password, String customerId, String role) {
         // 1️⃣ Retrieve the Management API bearer token
         String auth = tokens.getBearer();
 
@@ -104,8 +115,7 @@ public class Auth0UserService {
             throw new IllegalStateException("Auth0 user created but user_id missing");
         }
 
-        // 👇 Straight role assignment — that’s it.
-        assignRole(userId, "rol_c7PHGjx2QtuPyVBE", auth);
+        assignRequestedRole(userId, role, auth);
         
         
         // ✅ Return the created user object
@@ -113,6 +123,58 @@ public class Auth0UserService {
     }
 
     
+    /**
+     * Grants the caller-requested role to a newly created user.
+     *
+     * <p>If assignment fails the user is deleted again, so the caller sees a single failed
+     * operation instead of an account that exists but carries no entitlements — and so a
+     * retry is not blocked by a 409 "user already exists". When the Management token lacks
+     * {@code delete:users} the account cannot be removed; the error then names the user id
+     * so an operator can finish or delete it by hand.</p>
+     */
+    private void assignRequestedRole(String userId, String role, String bearer) {
+        String roleId = resolveRoleId(role, userId, bearer);
+
+        try {
+            assignRole(userId, roleId, bearer);
+        } catch (RestClientException assignFailure) {
+            log.error("Role {} ({}) could not be assigned to user {}; rolling the user back",
+                    role, roleId, userId, assignFailure);
+            rollback(userId, bearer, assignFailure, roleId);
+            throw new IllegalStateException(
+                    "Auth0 role " + roleId + " could not be assigned; user creation was rolled back. "
+                            + "Check auth0.mgmt.roles." + role + " exists in this tenant.", assignFailure);
+        }
+    }
+
+    /**
+     * Resolves a caller-supplied role name to its tenant role id. An unknown name is a
+     * client error, so the half-created user is removed before reporting it.
+     */
+    private String resolveRoleId(String role, String userId, String bearer) {
+        String roleId = roleProperties.getRoles().get(role);
+        if (roleId == null || roleId.isBlank()) {
+            log.warn("Unknown role {} requested; rolling user {} back", role, userId);
+            rollback(userId, bearer, null, null);
+            throw new BadRequestException("Unknown role '" + role + "'. Known roles: "
+                    + roleProperties.getRoles().keySet());
+        }
+        return roleId;
+    }
+
+    /** Removes a user created moments ago, so a failed provisioning leaves nothing behind. */
+    private void rollback(String userId, String bearer, RestClientException cause, String roleId) {
+        try {
+            deleteUser(userId, bearer);
+        } catch (RestClientException deleteFailure) {
+            log.error("Rollback failed; Auth0 user {} exists with no role", userId, deleteFailure);
+            throw new IllegalStateException(
+                    "Auth0 user " + userId + " was created but role " + roleId
+                            + " could not be assigned, and the user could not be removed. "
+                            + "Assign the role or delete the user manually.", cause);
+        }
+    }
+
     private void assignRole(String userId, String roleId, String bearer) {
         HttpHeaders h = new HttpHeaders();
         h.setContentType(MediaType.APPLICATION_JSON);
@@ -120,11 +182,26 @@ public class Auth0UserService {
 
         Map<String, Object> body = Map.of("roles", List.of(roleId));
 
-        String url = domain + "/api/v2/users/" + userId + "/roles"; // ✅ use raw user_id e.g. auth0|xxxxx
+        // Pass the raw user id (auth0|abc123): RestTemplate encodes the URI template
+        // itself, so pre-encoding the '|' here would double-escape it and Auth0 rejects
+        // the path with "invalid_uri".
+        String url = domain + "/api/v2/users/" + userId + "/roles";
 
         rt.postForEntity(
             url,
             new HttpEntity<>(body, h),
+            Void.class
+        );
+    }
+
+    private void deleteUser(String userId, String bearer) {
+        HttpHeaders h = new HttpHeaders();
+        h.set("Authorization", bearer);
+
+        rt.exchange(
+            domain + "/api/v2/users/" + userId,
+            HttpMethod.DELETE,
+            new HttpEntity<>(h),
             Void.class
         );
     }

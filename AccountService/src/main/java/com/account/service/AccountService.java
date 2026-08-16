@@ -55,6 +55,29 @@ public class AccountService {
 
 	}
 
+	/**
+	 * Ownership guard for lookups keyed by customer rather than by account, where
+	 * there is no Account entity to compare against.
+	 */
+	private void ensureSelfOrAdmin(String customerId) {
+
+		if (currentUser.hasScope("admin:accounts"))
+			return;
+
+		var me = currentUser.customerId().orElseThrow(() -> new OwnerAccessDeniedException());
+
+		if (!me.equals(customerId)) {
+			throw new OwnerAccessDeniedException();
+		}
+	}
+
+	/** Exposed so transaction reads can be gated on the owning account. */
+	public void ensureAccountReadableByCaller(UUID accountId) {
+		Account a = accountRepo.findById(accountId)
+				.orElseThrow(() -> new IllegalArgumentException("Account not found"));
+		ensureOwnerOrAdmin(a);
+	}
+
 	private void ensureOwnerOrAdmin(Account a) {
 		
 		
@@ -103,8 +126,12 @@ public class AccountService {
 	}
 
 	public AccountResponse get(UUID id) {
-		return mapper
-				.toDto(accountRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("Account not found")));
+		Account a = accountRepo.findById(id)
+				.orElseThrow(() -> new IllegalArgumentException("Account not found"));
+		// The response carries the balance, so skipping this check would leak through
+		// GET /accounts/{id} everything that GET /accounts/{id}/balance guards.
+		ensureOwnerOrAdmin(a);
+		return mapper.toDto(a);
 	}
 
 	public AccountBalanceResponse getBalance(UUID id) {
@@ -117,6 +144,7 @@ public class AccountService {
 
 	/** NEW: used by GET /customer/{id}/accounts */
 	public List<AccountResponse> findByCustomerId(String customerId) {
+		ensureSelfOrAdmin(customerId);
 		return accountRepo.findByCustomerId(customerId).stream().map(mapper::toDto).toList();
 	}
 

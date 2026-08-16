@@ -65,7 +65,19 @@ public class FallbackToolIntentResolver {
             return "getAccountBalance";
         }
 
-        if (containsAny(normalized, "transaction", "transactions")) {
+        // Customers rarely say "transaction". Without these synonyms the phrasing they do
+        // use falls through to the model, and a small local model routes it inconsistently.
+        if (containsAny(normalized,
+                "transaction",
+                "transactions",
+                "spending",
+                "spent",
+                "charge",
+                "charged",
+                "purchase",
+                "payment history",
+                "statement",
+                "activity")) {
             return "getTransactions";
         }
 

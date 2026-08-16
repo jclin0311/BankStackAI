@@ -27,3 +27,7 @@ auth0:
      client-id: ${AUTH0_MGMT_CLIENT_ID}
      client-secret: ${AUTH0_MGMT_CLIENT_SECRET}
      audience: ${AUTH0_DOMAIN:https://dev-4mxqf6pdu0czpsbp.us.auth0.com}/api/v2/
+     # Role name → Auth0 role id. Callers pass the name; ids are tenant-specific.
+     roles:
+       ROLE_CUSTOMER: ${AUTH0_ROLE_CUSTOMER_ID:rol_aQIIOMnJYsscxWpK}
+       ROLE_ADMIN: ${AUTH0_ROLE_ADMIN_ID:rol_BexXCyPfzbc1tZfa}

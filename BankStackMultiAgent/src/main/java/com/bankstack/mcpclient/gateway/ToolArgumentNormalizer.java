@@ -10,12 +10,17 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.Locale;
+import java.util.Set;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Component
 public class ToolArgumentNormalizer {
+
+    /** Mirrors AccountService's TransactionType enum. */
+    private static final Set<String> LEDGER_TRANSACTION_TYPES =
+            Set.of("CREDIT", "DEBIT", "HOLD_PLACED", "HOLD_RELEASED");
 
     private static final Pattern UUID_PATTERN = Pattern.compile(
             "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
@@ -78,9 +83,32 @@ public class ToolArgumentNormalizer {
 
         normalizeOffsetDateTime(args, "startDate");
         normalizeOffsetDateTime(args, "endDate");
+        normalizeTransactionType(args);
 
         args.putIfAbsent("limit", 20);
         args.putIfAbsent("offset", 0);
+    }
+
+    /**
+     * Drops a transaction type the ledger does not define.
+     *
+     * <p>The model readily turns a descriptive word into a filter — "the spending of $45"
+     * becomes {@code type=spending}. Passing that through matches no rows, so the caller is
+     * told there are zero transactions when in fact the question simply carried no valid
+     * filter. Answering from the unfiltered set is right; inventing an empty result is not.</p>
+     */
+    private void normalizeTransactionType(Map<String, Object> args) {
+        Object type = args.get("type");
+        if (isBlank(type)) {
+            args.remove("type");
+            return;
+        }
+        String candidate = type.toString().trim().toUpperCase(Locale.ROOT);
+        if (LEDGER_TRANSACTION_TYPES.contains(candidate)) {
+            args.put("type", candidate);
+        } else {
+            args.remove("type");
+        }
     }
 
     private void normalizeCustomerProfile(Map<String, Object> args) {

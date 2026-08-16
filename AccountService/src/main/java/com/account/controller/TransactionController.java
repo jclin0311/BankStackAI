@@ -4,6 +4,7 @@ package com.account.controller;
 import com.account.dto.TransactionResponse;
 import com.account.model.Transaction;
 import com.account.mapper.TransactionMapper;
+import com.account.service.AccountService;
 import com.account.service.TransactionService;
 
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class TransactionController {
 
     private final TransactionService transactionService;
     private final TransactionMapper transactionMapper;
+    private final AccountService accountService;
 
     @GetMapping("/accounts/{accountId}/transactions")
     @PreAuthorize("hasAuthority('SCOPE_fdx:transactions.read')")
@@ -40,6 +42,10 @@ public class TransactionController {
             @RequestParam(name = "offset", defaultValue = "0") int offset,
             @RequestParam(name = "type", required = false) String type
     ) throws AccessDeniedException {
+
+        // Without this the endpoint returns any account's history to any caller
+        // holding fdx:transactions.read — the account id is the only input.
+        accountService.ensureAccountReadableByCaller(accountId);
 
         Page<Transaction> page = transactionService.findTransactionsByAccount(
                 accountId, startDate, endDate, limit, offset, type
@@ -57,6 +63,7 @@ public class TransactionController {
     @PreAuthorize("hasAuthority('SCOPE_fdx:transactions.read')")
     public ResponseEntity<TransactionResponse> getTransactionById(@PathVariable UUID transactionId) {
         Transaction transaction = transactionService.findById(transactionId);
+        accountService.ensureAccountReadableByCaller(transaction.getAccountId());
         TransactionResponse dto = transactionMapper.toResponse(transaction);
 
         return ResponseEntity.ok(dto);
