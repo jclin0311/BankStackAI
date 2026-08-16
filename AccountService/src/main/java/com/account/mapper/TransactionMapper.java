@@ -18,10 +18,13 @@ public interface TransactionMapper {
     // Request -> Entity: names mostly match; BigDecimal -> BigDecimal auto maps.
     Transaction toEntity(TransactionRequest request);
 
-    /* Entity -> Response (minimal: only id/status) */
+    /* Entity -> Response. type and occurredAt are what let a caller tell a hold
+     * apart from the debit that follows it; both are enums/timestamps on the entity. */
     @Mappings({
-        @Mapping(target = "id",     expression = "java(entity.getTransactionId())"),
-        @Mapping(target = "status", expression = "java(entity.getStatus().name())")
+        @Mapping(target = "id",         expression = "java(entity.getTransactionId())"),
+        @Mapping(target = "type",       expression = "java(entity.getType() == null ? null : entity.getType().name())"),
+        @Mapping(target = "status",     expression = "java(entity.getStatus() == null ? null : entity.getStatus().name())"),
+        @Mapping(target = "occurredAt", expression = "java(entity.getOccurredAt() != null ? entity.getOccurredAt() : entity.getCreatedAt())")
     })
     TransactionResponse toResponse(Transaction entity);
     // Helper

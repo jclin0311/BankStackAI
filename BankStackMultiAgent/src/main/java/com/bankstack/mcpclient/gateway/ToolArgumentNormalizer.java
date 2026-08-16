@@ -18,6 +18,16 @@ import java.util.regex.Pattern;
 @Component
 public class ToolArgumentNormalizer {
 
+    /**
+     * An amount as a customer writes it: "$45", "45 dollars", "of 45.00 CAD".
+     * Requires a currency marker so a bare number — an account fragment, a date, a
+     * limit — is not mistaken for money.
+     */
+    private static final Pattern SPOKEN_AMOUNT_PATTERN = Pattern.compile(
+            "(?i)(?:\\$\\s*([0-9]+(?:\\.[0-9]{1,2})?))"
+                    + "|(?:([0-9]+(?:\\.[0-9]{1,2})?)\\s*(?:dollars?|cad|usd)\\b)"
+    );
+
     /** Mirrors AccountService's TransactionType enum. */
     private static final Set<String> LEDGER_TRANSACTION_TYPES =
             Set.of("CREDIT", "DEBIT", "HOLD_PLACED", "HOLD_RELEASED");
@@ -84,9 +94,33 @@ public class ToolArgumentNormalizer {
         normalizeOffsetDateTime(args, "startDate");
         normalizeOffsetDateTime(args, "endDate");
         normalizeTransactionType(args);
+        normalizeTransactionAmount(message, args);
 
         args.putIfAbsent("limit", 20);
         args.putIfAbsent("offset", 0);
+    }
+
+    /**
+     * Lifts an amount out of the question so retrieval can narrow to it.
+     *
+     * <p>"what was the spending of $45 for" names the one detail that identifies the entry,
+     * and without this the amount is discarded and the caller gets the whole recent window
+     * back. The MCP tool widens again when nothing matches exactly, so a misremembered
+     * figure degrades to a broader answer rather than an empty one.</p>
+     */
+    private void normalizeTransactionAmount(String message, Map<String, Object> args) {
+        putAlias(args, "amount", "value", "transactionAmount");
+        if (!isBlank(args.get("amount")) || message == null) {
+            return;
+        }
+        Matcher matcher = SPOKEN_AMOUNT_PATTERN.matcher(message);
+        if (matcher.find()) {
+            // group 1 is the "$45" form, group 2 the "45 dollars" form
+            String value = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
+            if (value != null) {
+                args.put("amount", value);
+            }
+        }
     }
 
     /**

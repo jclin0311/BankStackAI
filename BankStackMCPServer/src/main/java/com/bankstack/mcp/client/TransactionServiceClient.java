@@ -31,7 +31,8 @@ public interface TransactionServiceClient {
             @Nullable OffsetDateTime endDate,
             @RequestParam(value = "limit", defaultValue = "5") Integer limit,
             @RequestParam(value = "offset", defaultValue = "0") Integer offset,
-            @RequestParam(value = "type", required = false) @Nullable String type
+            @RequestParam(value = "type", required = false) @Nullable String type,
+            @RequestParam(value = "amount", required = false) @Nullable java.math.BigDecimal amount
     );
 
     @GetMapping("/api/v1/transactions/{transactionId}")

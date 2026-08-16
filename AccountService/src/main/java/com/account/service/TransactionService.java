@@ -58,10 +58,11 @@ public class TransactionService {
 
 	    
 	    public Page<Transaction> findTransactionsByAccount(UUID accountId, OffsetDateTime startDate, OffsetDateTime endDate,
-	                                                      int limit, int offset, String type) {
+	                                                      int limit, int offset, String type, java.math.BigDecimal amount) {
 	        Pageable pageable = PageRequest.of(offset / limit, limit, Sort.by("createdAt").descending());
 	        Specification<Transaction> spec = Specification.where(TransactionSpecifications.accountEquals(accountId))
-	                .and(TransactionSpecifications.withFilters(startDate, endDate, type));
+	                .and(TransactionSpecifications.withFilters(startDate, endDate, type))
+	                .and(TransactionSpecifications.amountEquals(amount));
 
 	        return transactionRepository.findAll(spec, pageable);
 	    }

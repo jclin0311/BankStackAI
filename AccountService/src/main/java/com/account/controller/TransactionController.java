@@ -40,7 +40,10 @@ public class TransactionController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime endDate,
             @RequestParam(name = "limit", defaultValue = "5") int limit,
             @RequestParam(name = "offset", defaultValue = "0") int offset,
-            @RequestParam(name = "type", required = false) String type
+            @RequestParam(name = "type", required = false) String type,
+            // Lets "what was the $45 charge" narrow at the database rather than
+            // pulling a window and hoping the caller spots the row.
+            @RequestParam(name = "amount", required = false) java.math.BigDecimal amount
     ) throws AccessDeniedException {
 
         // Without this the endpoint returns any account's history to any caller
@@ -48,7 +51,7 @@ public class TransactionController {
         accountService.ensureAccountReadableByCaller(accountId);
 
         Page<Transaction> page = transactionService.findTransactionsByAccount(
-                accountId, startDate, endDate, limit, offset, type
+                accountId, startDate, endDate, limit, offset, type, amount
         );
 
         List<TransactionResponse> dtos = page.getContent().stream()

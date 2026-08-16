@@ -146,6 +146,8 @@ public class BankStackTools {
             String endDate,
             @McpToolParam(description = "Optional transaction type filter", required = false)
             String type,
+            @McpToolParam(description = "Optional exact amount filter, e.g. 45.00", required = false)
+            String amount,
             @McpToolParam(description = "Optional page size. Default is 5.", required = false)
             Integer limit,
             @McpToolParam(description = "Optional offset. Default is 0.", required = false)
@@ -154,7 +156,7 @@ public class BankStackTools {
         CurrentActor actor = currentActorResolver.resolve();
         ToolInvocationContext context = currentContext(actor, false, false);
         String requestSummary = "accountId=%s,startDate=%s,endDate=%s,type=%s,limit=%s,offset=%s"
-                .formatted(accountId, startDate, endDate, type, limit, offset);
+                .formatted(accountId, startDate, endDate, type, limit, offset) + ",amount=" + amount;
 
         if (isBlank(accountId)) {
             return needInput("Please provide accountId to retrieve transactions.", "READ_TRANSACTIONS", "accountId");
@@ -173,16 +175,17 @@ public class BankStackTools {
             int safeLimit = limit == null ? 5 : Math.min(Math.max(limit, 1), 100);
             int safeOffset = offset == null ? 0 : Math.max(offset, 0);
 
-            List<TransactionItem> items = transactionServiceClient.getTransactions(
-                            parsedAccountId,
-                            parsedStartDate,
-                            parsedEndDate,
-                            safeLimit,
-                            safeOffset,
-                            blankToNull(type))
-                    .stream()
-                    .map(this::toTransactionItem)
-                    .toList();
+            java.math.BigDecimal parsedAmount = parseAmount(amount);
+
+            List<TransactionItem> items = fetchPostings(
+                    parsedAccountId, parsedStartDate, parsedEndDate, safeLimit, safeOffset, type, parsedAmount);
+
+            // An amount the customer half-remembers should not produce a dead end: if the
+            // exact figure matches nothing, answer from the unfiltered window instead.
+            if (items.isEmpty() && parsedAmount != null) {
+                items = fetchPostings(
+                        parsedAccountId, parsedStartDate, parsedEndDate, safeLimit, safeOffset, type, null);
+            }
 
             TransactionsToolResponse toolResponse = new TransactionsToolResponse(
                     parsedAccountId,
@@ -698,6 +701,7 @@ public class BankStackTools {
                         endDate,
                         20,
                         0,
+                        null,
                         null)
                 .stream()
                 .map(this::toTransactionItem)
@@ -815,14 +819,63 @@ public class BankStackTools {
         );
     }
 
+    /** Fetches ledger entries for an account and reduces them to customer-visible postings. */
+    private List<TransactionItem> fetchPostings(UUID accountId,
+                                                OffsetDateTime startDate,
+                                                OffsetDateTime endDate,
+                                                int limit,
+                                                int offset,
+                                                String type,
+                                                BigDecimal amount) {
+        return transactionServiceClient.getTransactions(
+                        accountId, startDate, endDate, limit, offset, blankToNull(type), amount)
+                .stream()
+                .map(this::toTransactionItem)
+                .filter(BankStackTools::isCustomerVisiblePosting)
+                .toList();
+    }
+
+    /** Accepts "45", "45.00" or "$45"; anything unparseable is treated as no filter. */
+    private BigDecimal parseAmount(String amount) {
+        String cleaned = blankToNull(amount);
+        if (cleaned == null) {
+            return null;
+        }
+        try {
+            return new BigDecimal(cleaned.replace("$", "").replace(",", "").trim());
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    /**
+     * Keeps postings and drops holds.
+     *
+     * <p>A single bill payment writes HOLD_PLACED, HOLD_RELEASED and DEBIT to the ledger.
+     * The hold pair is an internal reservation that nets to zero — surfacing it makes one
+     * $45 payment look like three $45 events, which is what a customer would read as being
+     * charged three times. The ledger keeps every row; the customer-facing tool shows the
+     * money that actually moved. Holds remain visible through the account API and are
+     * reflected in the available balance.</p>
+     */
+    private static boolean isCustomerVisiblePosting(TransactionItem item) {
+        String type = item.type();
+        if (type == null) {
+            return true; // unclassified rows are shown rather than silently hidden
+        }
+        return !type.startsWith("HOLD_");
+    }
+
     private TransactionItem toTransactionItem(TransactionResponse response) {
         return new TransactionItem(
                 response.id(),
+                response.type(),
                 response.status(),
                 response.amount(),
+                response.currency(),
                 response.reason(),
                 response.balanceAfter(),
-                "Transaction retrieved successfully."
+                response.occurredAt()
         );
     }
 

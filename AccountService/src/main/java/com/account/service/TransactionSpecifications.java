@@ -30,4 +30,13 @@ public class TransactionSpecifications {
     public static Specification<Transaction> accountEquals(UUID accountId) {
         return (root, query, cb) -> cb.equal(root.get("accountId"), accountId);
     }
+
+    /**
+     * Narrows to entries of an exact amount, for questions like "what was the $45 charge".
+     * Numeric comparison is scale-insensitive in SQL, so 45 matches a stored 45.00.
+     */
+    public static Specification<Transaction> amountEquals(java.math.BigDecimal amount) {
+        return (root, query, cb) ->
+                amount == null ? cb.conjunction() : cb.equal(root.get("amount"), amount);
+    }
 }

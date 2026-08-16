@@ -93,6 +93,7 @@ public class ToolInvocationService {
                     optionalStringValue(input, "startDate"),
                     optionalStringValue(input, "endDate"),
                     optionalStringValue(input, "type"),
+                    optionalStringValue(input, "amount"),
                     integerValue(input, "limit"),
                     integerValue(input, "offset")
             );
