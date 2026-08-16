@@ -15,7 +15,23 @@ import java.math.BigDecimal;
 @Mapper(componentModel = "spring")
 public interface TransactionMapper {
 
-    // Request -> Entity: names mostly match; BigDecimal -> BigDecimal auto maps.
+    /*
+     * Request -> Entity: names mostly match; BigDecimal -> BigDecimal auto maps.
+     *
+     * The ignores below are deliberate — each of these is owned somewhere other than the
+     * request. Spelling them out keeps the strict unmapped-target policy in force, so a
+     * field added to Transaction and then forgotten still raises a warning instead of
+     * disappearing into a wall of expected ones.
+     */
+    @Mappings({
+        @Mapping(target = "id",                 ignore = true), // JPA identity
+        @Mapping(target = "transactionId",      ignore = true), // @PrePersist assigns a UUID
+        @Mapping(target = "status",             ignore = true), // @PrePersist defaults to POSTED
+        @Mapping(target = "requestFingerprint", ignore = true), // set by AccountService.emitTransaction
+        @Mapping(target = "createdAt",          ignore = true), // auditing
+        @Mapping(target = "updatedAt",          ignore = true), // auditing
+        @Mapping(target = "version",            ignore = true)  // optimistic locking
+    })
     Transaction toEntity(TransactionRequest request);
 
     /* Entity -> Response. type and occurredAt are what let a caller tell a hold
