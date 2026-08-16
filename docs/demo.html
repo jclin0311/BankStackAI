@@ -61,8 +61,6 @@
   .fallback-item { padding:.6rem 0 0; }
   .fallback-item h4 { margin:.6rem 0 .2rem; font-size:.9rem; }
   .fallback-item p { margin:0 0 .3rem; font-size:.85rem; color:#475569; }
-  section.refusal { border:1px solid #fecdd3; background:#fff1f2; border-radius:10px; padding:1rem 1.1rem; margin-top:2.2rem; }
-  section.refusal h2 { margin-top:0; }
   .back { font-size:.85rem; margin-top:2rem; }
 </style>
 </head>
@@ -415,8 +413,7 @@ confirmation token  → [redacted-token]</pre></details></div>
 </details>
 
 
-<section class="refusal">
-<h2>3 &middot; Two customers, one account</h2>
+<h2>3 &middot; Claim-based authorization and ownership validation</h2>
 <p class="lead">Both <strong>lin</strong> and <strong>john</strong> are real Auth0 users holding the same
 ROLE_CUSTOMER permissions, so <code>@PreAuthorize</code> lets them both through the door. What separates
 them is the <code>customer_id</code> claim their tokens carry, which the service compares against the
@@ -478,7 +475,6 @@ account's owner. Same endpoint, same scopes &mdash; different answer.</p>
 
 <p class="lead" style="margin-top:1rem">Both tokens carry identical ROLE_CUSTOMER permissions and
 differ only in <code>customer_id</code>. Scope opens the endpoint for both; ownership decides who gets data.</p>
-</section>
 
 <p class="back"><a href="index.html">← Back to the API reference</a></p>
 </main>
