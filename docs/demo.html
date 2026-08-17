@@ -35,7 +35,9 @@
   .edge { fill:none; stroke:#94a3b8; stroke-width:1.5; }
   .arrowhead { fill:#94a3b8; }
   .rail { fill:#f1f5f9; stroke:#cbd5e1; stroke-dasharray:4 3; }
+  .rail.guard { fill:#cbd5e1; stroke:#577bae; }
   .railttl { font:600 11px ui-sans-serif; fill:#64748b; text-anchor:middle; letter-spacing:.05em; text-transform:uppercase; }
+  .railttl.guard { fill:#334155; }
   .state { fill:#fff; stroke:#94a3b8; }
   .st { font:600 11.5px ui-monospace,Menlo,monospace; fill:#334155; text-anchor:middle; }
   .hint { font:italic 11px ui-sans-serif; fill:#94a3b8; text-anchor:middle; }
@@ -293,8 +295,8 @@ who asked.</p>
   <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
     <path d="M 0 0 L 10 5 L 0 10 z" class="arrowhead"/></marker></defs>
 
-  <rect x="14" y="14" width="1172" height="128" rx="9" class="rail"/>
-  <text x="600" y="34" class="railttl">agent guardrails · conversation and workflow controls</text>
+  <rect x="14" y="14" width="1172" height="128" rx="9" class="rail guard"/>
+  <text x="600" y="34" class="railttl guard">agent guardrails · conversation and workflow controls</text>
 
   <g class="node" data-key="g-input" tabindex="0" role="button" aria-label="input guardrail">
       <rect x="40" y="46" width="300" height="80" rx="7" class="box"/>
@@ -393,7 +395,7 @@ confirmation token  → [redacted-token]</pre></details></div>
 </details>
 
 
-<h2>3 &middot; Two customers, one account</h2>
+<h2>3 &middot; Claim-based authorization, ownership validation</h2>
 <p class="lead">Both <strong>lin</strong> and <strong>john</strong> are real Auth0 users holding the same
 ROLE_CUSTOMER permissions, so <code>@PreAuthorize</code> lets them both through the door. What separates
 them is the <code>customer_id</code> claim their tokens carry, which the service compares against the
