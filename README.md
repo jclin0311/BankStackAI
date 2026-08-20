@@ -16,57 +16,62 @@ actual HTTP payloads, Kafka messages, database rows and audit lines at every ste
 
 ```mermaid
 flowchart TB
-    subgraph External
-        AUTH0[Auth0<br/>OAuth2 / JWT]
-        OLLAMA[Ollama<br/>llama3.2 / qwen2.5 / nomic-embed]
+    subgraph External["🌐 External"]
+        AUTH0["Auth0<br/>OAuth2 / JWT"]
+        OLLAMA["Ollama<br/>llama3.2 / qwen2.5<br/>nomic-embed"]
     end
 
-    subgraph AI["AI layer"]
-        AGENT[multi-agent :8096<br/>BankStackMultiAgent]
-        MCP[mcp-server :8095<br/>BankStackMCPServer]
-        RAG[rag-service :8098<br/>BankStackRag]
+    subgraph AI["🧠 AI layer"]
+        AGENT["multi-agent :8096<br/>BankStackMultiAgent"]
+        MCP["mcp-server :8095<br/>BankStackMCPServer"]
+        RAG["rag-service :8098<br/>BankStackRag"]
     end
 
-    subgraph Core["Core banking services"]
-        AUTHU[auth-user :8094<br/>AuthUser]
-        CUST[customer-service :8083<br/>CusomerService]
-        ACCT[account-service :8084<br/>AccountService]
-        PAY[payment-orchestrator :8086<br/>PaymentOrchestrator]
-        BILLER[biller-service :8088<br/>BillerService]
-        WORKER[billpay-worker :8090<br/>BillPayWorkerService]
-        SETTLE[settlement-service :8080<br/>SettlementService]
+    subgraph Core["🏦 Core banking services"]
+        AUTHU["auth-user :8094<br/>AuthUser"]
+        CUST["customer-service :8083<br/>CusomerService"]
+        ACCT["account-service :8084<br/>AccountService"]
+        PAY["payment-orchestrator :8086<br/>PaymentOrchestrator"]
+        BILLER["biller-service :8088<br/>BillerService"]
+        WORKER["billpay-worker :8090<br/>BillPayWorkerService"]
+        SETTLE["settlement-service :8080<br/>SettlementService"]
     end
 
-    subgraph Infra["Infrastructure"]
-        KAFKA[(Kafka<br/>billpay.* / bill.batch.* topics)]
-        PG[(Postgres + pgvector<br/>one DB per service)]
+    subgraph Infra["🗄️ Infrastructure"]
+        KAFKA[("Kafka<br/>billpay.* / bill.batch.* topics")]
+        PG[("Postgres + pgvector<br/>one DB per service")]
     end
 
-    AGENT -- "MCP (streamable HTTP)" --> MCP
-    AGENT -- chat / extraction --> OLLAMA
-    RAG -- embeddings + chat --> OLLAMA
-    MCP -- REST --> ACCT
-    MCP -- REST --> CUST
-    MCP -- REST --> PAY
-    MCP -- REST --> RAG
+    AGENT -->|"MCP (streamable HTTP)"| MCP
+    AGENT -->|"chat / extraction"| OLLAMA
+    RAG -->|"embeddings + chat"| OLLAMA
+    MCP -->|REST| ACCT
+    MCP -->|REST| CUST
+    MCP -->|REST| PAY
+    MCP -->|REST| RAG
 
-    AUTHU -- "Auth0 Management API" --> AUTH0
-    CUST -- Feign --> AUTHU
-    ACCT -- Feign --> CUST
-    PAY -- REST --> ACCT
-    PAY -- REST --> BILLER
+    AUTHU -->|"Auth0 Management API"| AUTH0
+    CUST -->|Feign| AUTHU
+    ACCT -->|Feign| CUST
+    PAY -->|REST| ACCT
+    PAY -->|REST| BILLER
 
-    PAY -- produce/consume --> KAFKA
-    WORKER -- consume/produce --> KAFKA
-    SETTLE -- consume --> KAFKA
-    CUST -- produce --> KAFKA
+    PAY -->|"produce/consume"| KAFKA
+    WORKER -->|"consume/produce"| KAFKA
+    SETTLE -->|consume| KAFKA
+    CUST -->|produce| KAFKA
 
     Core --> PG
     RAG --> PG
     AGENT --> PG
 
-    Core -. "JWT validation (JWKS)" .-> AUTH0
-    AI -. "JWT validation (JWKS)" .-> AUTH0
+    Core -.->|"JWT validation (JWKS)"| AUTH0
+    AI -.->|"JWT validation (JWKS)"| AUTH0
+
+    style External fill:#d4eeff,stroke:#63c0f5,color:#1e1e1e
+    style AI fill:#e8dcf4,stroke:#9f77cd,color:#1e1e1e
+    style Core fill:#fff3cd,stroke:#e9b306,color:#1e1e1e
+    style Infra fill:#d4f5d4,stroke:#3fd73c,color:#1e1e1e
 ```
 
 **Bill-pay flow:** payment-orchestrator receives a payment request, emits
@@ -109,7 +114,7 @@ pulled if you want the AI services to answer.
 docker compose up -d
 
 # 2. Build everything (shared libs first — order matters)
-./build-all.sh
+./scripts/build-all.sh
 
 # 3. Run any service
 cd AccountService && mvn spring-boot:run
@@ -131,8 +136,8 @@ for m in */; do (cd "$m" && [ -f pom.xml ] && mvn test); done
 Each service has a runtime-only Dockerfile that copies the jar built by Maven.
 
 ```bash
-./build-all.sh          # build jars
-./build-images.sh       # docker build bankstack/<service>:local for all 10 services
+./scripts/build-all.sh          # build jars
+./scripts/build-images.sh       # docker build bankstack/<service>:local for all 10 services
 ```
 
 Deploy to a local cluster (OrbStack: `orb start k8s`; also works on minikube/k3s —
