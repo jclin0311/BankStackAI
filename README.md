@@ -15,7 +15,7 @@ actual HTTP payloads, Kafka messages, database rows and audit lines at every ste
 ## Architecture
 
 ```mermaid
-flowchart TB
+flowchart LR
     subgraph AI["🧠 AI layer"]
         AGENT["multi-agent :8096"]
         MCP["mcp-server :8095"]
