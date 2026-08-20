@@ -15,7 +15,11 @@ actual HTTP payloads, Kafka messages, database rows and audit lines at every ste
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TD
+    subgraph Edge["🔐 Identity"]
+        AUTH0["Auth0<br/>OAuth2 / JWT"]
+    end
+
     subgraph AI["🧠 AI layer"]
         AGENT["multi-agent :8096"]
         MCP["mcp-server :8095"]
@@ -24,10 +28,6 @@ flowchart LR
 
     subgraph Models["🤖 Model runtime"]
         OLLAMA["Ollama<br/>llama3.2 / qwen2.5<br/>nomic-embed"]
-    end
-
-    subgraph Edge["🔐 Identity"]
-        AUTH0["Auth0<br/>OAuth2 / JWT"]
     end
 
     subgraph Core["🏦 Core banking services"]
@@ -47,14 +47,16 @@ flowchart LR
 
     AGENT -->|"MCP (streamable HTTP)"| MCP
     AGENT -->|"chat / extraction"| OLLAMA
-    RAG -->|"embeddings + chat"| OLLAMA
     MCP -->|REST| RAG
+    RAG -->|"embeddings + chat"| OLLAMA
+    RAG -->|"vector search"| PG
+
     MCP -->|REST| PAY
     MCP -->|REST| ACCT
     MCP -->|REST| CUST
 
-    PAY -->|REST| ACCT
     PAY -->|REST| BILLER
+    PAY -->|REST| ACCT
     ACCT -->|Feign| CUST
     CUST -->|Feign| AUTHU
     AUTHU -->|"Management API"| AUTH0
@@ -63,13 +65,15 @@ flowchart LR
     WORKER -->|"consume/produce"| KAFKA
     SETTLE -->|consume| KAFKA
     CUST -->|produce| KAFKA
-    RAG -->|"vector search"| PG
 
-    style AI stroke:#9f77cd,stroke-width:2px
-    style Models stroke:#e26d7a,stroke-width:2px
-    style Edge stroke:#63c0f5,stroke-width:2px
-    style Core stroke:#e9b306,stroke-width:2px
-    style Infra stroke:#3fd73c,stroke-width:2px
+    classDef box fill:#ece7fb,stroke:#7e6bc4,stroke-width:1px,color:#1b1b2f
+    class AGENT,MCP,RAG,OLLAMA,AUTH0,PAY,ACCT,BILLER,CUST,AUTHU,WORKER,SETTLE,KAFKA,PG box
+
+    style Edge fill:#dbeeff,stroke:#63c0f5,stroke-width:2px,color:#1b1b2f
+    style AI fill:#ece2f7,stroke:#9f77cd,stroke-width:2px,color:#1b1b2f
+    style Models fill:#fbe2e5,stroke:#e26d7a,stroke-width:2px,color:#1b1b2f
+    style Core fill:#fdf3d0,stroke:#e9b306,stroke-width:2px,color:#1b1b2f
+    style Infra fill:#dcf5da,stroke:#3fd73c,stroke-width:2px,color:#1b1b2f
 ```
 
 **Bill-pay flow:** payment-orchestrator receives a payment request, emits
