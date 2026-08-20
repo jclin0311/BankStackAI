@@ -51,9 +51,9 @@ flowchart TD
     MCP -->|REST| RAG
     RAG -->|"embeddings + chat"| OLLAMA
     RAG -->|"vector search"| PG
-    CUST ~~~ PG
+    AUTHU ~~~ PG
     %% ^ invisible link: pulls Postgres left so the Infrastructure box
-    %%   sits centred at the bottom instead of hugging the right edge
+    %%   sits at the bottom middle instead of hugging the right edge
 
     MCP -->|REST| PAY
     MCP -->|REST| ACCT
@@ -67,10 +67,10 @@ flowchart TD
     AUTH0 -.->|"JWKS: every service validates JWTs"| PAY
     AUTH0 -.-> AGENT
 
-    %% invisible links: fold the leaf services into a second column
-    %% so the diagram grows downwards instead of sideways
-    BILLER ~~~ WORKER
-    WORKER ~~~ SETTLE
+    %% invisible links: rank the leaf services into a second column so the
+    %% diagram grows downwards, and keep billpay-worker on the biller/account row
+    WORKER ~~~ CUST
+    CUST ~~~ SETTLE
 
     PAY -->|"produce/consume"| KAFKA
     WORKER -->|"consume/produce"| KAFKA
