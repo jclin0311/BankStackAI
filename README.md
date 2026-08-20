@@ -16,62 +16,60 @@ actual HTTP payloads, Kafka messages, database rows and audit lines at every ste
 
 ```mermaid
 flowchart TB
-    subgraph External["🌐 External"]
-        AUTH0["Auth0<br/>OAuth2 / JWT"]
+    subgraph AI["🧠 AI layer"]
+        AGENT["multi-agent :8096"]
+        MCP["mcp-server :8095"]
+        RAG["rag-service :8098"]
+    end
+
+    subgraph Models["🤖 Model runtime"]
         OLLAMA["Ollama<br/>llama3.2 / qwen2.5<br/>nomic-embed"]
     end
 
-    subgraph AI["🧠 AI layer"]
-        AGENT["multi-agent :8096<br/>BankStackMultiAgent"]
-        MCP["mcp-server :8095<br/>BankStackMCPServer"]
-        RAG["rag-service :8098<br/>BankStackRag"]
+    subgraph Edge["🔐 Identity"]
+        AUTH0["Auth0<br/>OAuth2 / JWT"]
     end
 
     subgraph Core["🏦 Core banking services"]
-        AUTHU["auth-user :8094<br/>AuthUser"]
-        CUST["customer-service :8083<br/>CusomerService"]
-        ACCT["account-service :8084<br/>AccountService"]
-        PAY["payment-orchestrator :8086<br/>PaymentOrchestrator"]
-        BILLER["biller-service :8088<br/>BillerService"]
-        WORKER["billpay-worker :8090<br/>BillPayWorkerService"]
-        SETTLE["settlement-service :8080<br/>SettlementService"]
+        PAY["payment-orchestrator :8086"]
+        ACCT["account-service :8084"]
+        BILLER["biller-service :8088"]
+        CUST["customer-service :8083"]
+        AUTHU["auth-user :8094"]
+        WORKER["billpay-worker :8090"]
+        SETTLE["settlement-service :8080"]
     end
 
     subgraph Infra["🗄️ Infrastructure"]
-        KAFKA[("Kafka<br/>billpay.* / bill.batch.* topics")]
+        KAFKA[("Kafka<br/>billpay.* / bill.batch.*")]
         PG[("Postgres + pgvector<br/>one DB per service")]
     end
 
     AGENT -->|"MCP (streamable HTTP)"| MCP
     AGENT -->|"chat / extraction"| OLLAMA
     RAG -->|"embeddings + chat"| OLLAMA
+    MCP -->|REST| RAG
+    MCP -->|REST| PAY
     MCP -->|REST| ACCT
     MCP -->|REST| CUST
-    MCP -->|REST| PAY
-    MCP -->|REST| RAG
 
-    AUTHU -->|"Auth0 Management API"| AUTH0
-    CUST -->|Feign| AUTHU
-    ACCT -->|Feign| CUST
     PAY -->|REST| ACCT
     PAY -->|REST| BILLER
+    ACCT -->|Feign| CUST
+    CUST -->|Feign| AUTHU
+    AUTHU -->|"Management API"| AUTH0
 
     PAY -->|"produce/consume"| KAFKA
     WORKER -->|"consume/produce"| KAFKA
     SETTLE -->|consume| KAFKA
     CUST -->|produce| KAFKA
+    RAG -->|"vector search"| PG
 
-    Core --> PG
-    RAG --> PG
-    AGENT --> PG
-
-    Core -.->|"JWT validation (JWKS)"| AUTH0
-    AI -.->|"JWT validation (JWKS)"| AUTH0
-
-    style External fill:#d4eeff,stroke:#63c0f5,color:#1e1e1e
-    style AI fill:#e8dcf4,stroke:#9f77cd,color:#1e1e1e
-    style Core fill:#fff3cd,stroke:#e9b306,color:#1e1e1e
-    style Infra fill:#d4f5d4,stroke:#3fd73c,color:#1e1e1e
+    style AI stroke:#9f77cd,stroke-width:2px
+    style Models stroke:#e26d7a,stroke-width:2px
+    style Edge stroke:#63c0f5,stroke-width:2px
+    style Core stroke:#e9b306,stroke-width:2px
+    style Infra stroke:#3fd73c,stroke-width:2px
 ```
 
 **Bill-pay flow:** payment-orchestrator receives a payment request, emits
@@ -82,6 +80,10 @@ settlement-service settles. Retries / DLQ ride on `bill.batch.retry|resubmit|dlq
 **AI flow:** multi-agent takes a natural-language request, uses Ollama to reason and
 extract intents, calls tools exposed by mcp-server over MCP, which fans out to the
 core services; rag-service answers knowledge questions with pgvector hybrid search.
+
+**Cross-cutting (not drawn, to keep the diagram readable):** every service owns its own
+Postgres database, and every service validates incoming JWTs against Auth0's JWKS
+endpoint via `commons-security`.
 
 ## Services
 
