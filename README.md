@@ -15,7 +15,7 @@ actual HTTP payloads, Kafka messages, database rows and audit lines at every ste
 ## Architecture
 
 ```mermaid
-%%{init: {"flowchart": {"rankSpacing": 62, "nodeSpacing": 42, "curve": "basis"}}}%%
+%%{init: {"flowchart": {"rankSpacing": 80, "nodeSpacing": 42, "curve": "basis"}}}%%
 flowchart TD
     subgraph Edge["🔐 Identity"]
         AUTH0["Auth0<br/>OAuth2 / JWT"]
@@ -61,6 +61,8 @@ flowchart TD
     ACCT -->|Feign| CUST
     CUST -->|Feign| AUTHU
     AUTHU -->|"Management API"| AUTH0
+    AUTH0 -.->|"JWKS: every service validates JWTs"| PAY
+    AUTH0 -.-> AGENT
 
     %% invisible links: fold the leaf services into a second column
     %% so the diagram grows downwards instead of sideways
@@ -91,9 +93,9 @@ settlement-service settles. Retries / DLQ ride on `bill.batch.retry|resubmit|dlq
 extract intents, calls tools exposed by mcp-server over MCP, which fans out to the
 core services; rag-service answers knowledge questions with pgvector hybrid search.
 
-**Cross-cutting (not drawn, to keep the diagram readable):** every service owns its own
-Postgres database, and every service validates incoming JWTs against Auth0's JWKS
-endpoint via `commons-security`.
+**Cross-cutting:** the dotted edges from Auth0 stand in for every service — all of them
+validate incoming JWTs against Auth0's JWKS endpoint via `commons-security`. Likewise each
+service owns its own Postgres database; only the shared pgvector store is drawn.
 
 ## Services
 
