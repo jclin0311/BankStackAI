@@ -15,6 +15,7 @@ actual HTTP payloads, Kafka messages, database rows and audit lines at every ste
 ## Architecture
 
 ```mermaid
+%%{init: {"flowchart": {"rankSpacing": 62, "nodeSpacing": 42, "curve": "basis"}}}%%
 flowchart TD
     subgraph Edge["🔐 Identity"]
         AUTH0["Auth0<br/>OAuth2 / JWT"]
@@ -60,6 +61,11 @@ flowchart TD
     ACCT -->|Feign| CUST
     CUST -->|Feign| AUTHU
     AUTHU -->|"Management API"| AUTH0
+
+    %% invisible links: fold the leaf services into a second column
+    %% so the diagram grows downwards instead of sideways
+    BILLER ~~~ WORKER
+    WORKER ~~~ SETTLE
 
     PAY -->|"produce/consume"| KAFKA
     WORKER -->|"consume/produce"| KAFKA
