@@ -51,6 +51,9 @@ flowchart TD
     MCP -->|REST| RAG
     RAG -->|"embeddings + chat"| OLLAMA
     RAG -->|"vector search"| PG
+    CUST ~~~ PG
+    %% ^ invisible link: pulls Postgres left so the Infrastructure box
+    %%   sits centred at the bottom instead of hugging the right edge
 
     MCP -->|REST| PAY
     MCP -->|REST| ACCT
